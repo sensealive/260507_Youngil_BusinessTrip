@@ -1,0 +1,231 @@
+﻿<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>영일 출장자 현황</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Youngil Business Trip</p>
+        <h1>영일 출장자 현황</h1>
+        <p class="subtitle">직원 출장 등록, 현재 출장자 확인, 출장 통계를 한 곳에서 관리합니다.</p>
+      </div>
+      <div class="header-actions">
+        <span id="sessionBadge" class="badge badge-muted">로그아웃</span>
+        <button id="logoutButton" class="button secondary hidden" type="button">로그아웃</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <section id="messageBox" class="message hidden" aria-live="polite"></section>
+
+      <section id="setupPanel" class="panel setup-panel hidden">
+        <div>
+          <p class="eyebrow">Supabase 설정</p>
+          <h2>처음 실행 설정</h2>
+          <p>GitHub Pages에서는 공개 가능한 Supabase URL과 anon key가 필요합니다. 값은 이 브라우저의 localStorage에만 저장됩니다.</p>
+        </div>
+        <form id="configForm" class="grid two-cols">
+          <label>
+            Supabase URL
+            <input id="configUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+          </label>
+          <label>
+            Supabase anon key
+            <input id="configAnonKey" type="password" placeholder="eyJ..." autocomplete="off" />
+          </label>
+          <div class="form-actions full-row">
+            <button class="button" type="submit">설정 저장</button>
+            <button id="clearConfigButton" class="button ghost" type="button">설정 삭제</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="loginPanel" class="panel auth-panel hidden">
+        <div>
+          <p class="eyebrow">로그인</p>
+          <h2>부서와 이름을 선택하세요</h2>
+          <p>관리자가 등록한 직원만 로그인할 수 있습니다.</p>
+        </div>
+        <form id="loginForm" class="grid three-cols">
+          <label>
+            부서명
+            <select id="departmentSelect" required></select>
+          </label>
+          <label>
+            이름
+            <select id="employeeSelect" required></select>
+          </label>
+          <label>
+            비밀번호
+            <input id="passwordInput" type="password" minlength="4" required autocomplete="current-password" />
+          </label>
+          <div class="form-actions full-row">
+            <button class="button" type="submit">로그인</button>
+            <button id="showSetupButton" class="button ghost" type="button">Supabase 설정</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="dashboard" class="hidden">
+        <section class="panel dashboard-hero">
+          <div>
+            <p class="eyebrow">대시보드</p>
+            <h2 id="welcomeTitle">환영합니다</h2>
+            <p id="roleSummary">권한 정보를 불러오는 중입니다.</p>
+          </div>
+          <div class="quick-stats">
+            <div class="stat-card">
+              <span id="currentTripCount">0</span>
+              <small>현재 출장자</small>
+            </div>
+            <div class="stat-card">
+              <span id="myTripCount">0</span>
+              <small>내 출장</small>
+            </div>
+            <div class="stat-card">
+              <span id="visibleTripCount">0</span>
+              <small>조회 가능 출장</small>
+            </div>
+          </div>
+        </section>
+
+        <nav class="tabs" aria-label="주요 기능">
+          <button class="tab active" type="button" data-tab="tripsSection">출장 등록/조회</button>
+          <button class="tab" type="button" data-tab="currentSection">현재 출장자</button>
+          <button class="tab" type="button" data-tab="statsSection">통계</button>
+          <button class="tab admin-only" type="button" data-tab="adminSection">관리자</button>
+          <button class="tab" type="button" data-tab="passwordSection">비밀번호 변경</button>
+        </nav>
+
+        <section id="tripsSection" class="tab-panel">
+          <div class="grid layout-grid">
+            <section class="panel">
+              <p class="eyebrow">출장 입력</p>
+              <h2 id="tripFormTitle">출장 등록</h2>
+              <form id="tripForm" class="stacked-form">
+                <input id="tripId" type="hidden" />
+                <label>
+                  출장 시작일
+                  <input id="startDate" type="date" required />
+                </label>
+                <label>
+                  출장 종료일
+                  <input id="endDate" type="date" required />
+                </label>
+                <label>
+                  국가
+                  <select id="countrySelect" required></select>
+                </label>
+                <label>
+                  방문업체명
+                  <input id="companyName" type="text" required placeholder="고객사 또는 협력사" />
+                </label>
+                <label>
+                  도시명 <span class="optional">선택</span>
+                  <input id="city" type="text" placeholder="예: Tokyo" />
+                </label>
+                <label>
+                  비고 <span class="optional">선택</span>
+                  <textarea id="note" rows="3" placeholder="필요 시 입력"></textarea>
+                </label>
+                <div class="form-actions">
+                  <button class="button" type="submit">저장</button>
+                  <button id="resetTripFormButton" class="button secondary" type="button">초기화</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="panel table-panel">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">출장 목록</p>
+                  <h2 id="tripListTitle">내 출장</h2>
+                </div>
+                <button id="refreshButton" class="button secondary" type="button">새로고침</button>
+              </div>
+              <div id="tripList" class="card-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="currentSection" class="tab-panel hidden">
+          <section class="panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">현재 출장자</p>
+                <h2>오늘 기준 출장 중인 직원</h2>
+              </div>
+            </div>
+            <div id="currentTripList" class="card-list"></div>
+          </section>
+        </section>
+
+        <section id="statsSection" class="tab-panel hidden">
+          <section class="panel">
+            <p class="eyebrow">통계</p>
+            <h2>출장일수 통계</h2>
+            <div id="statsGrid" class="stats-grid"></div>
+          </section>
+        </section>
+
+        <section id="adminSection" class="tab-panel hidden">
+          <div class="grid layout-grid">
+            <section class="panel admin-card">
+              <p class="eyebrow">부서 관리</p>
+              <h2>부서 추가</h2>
+              <form id="departmentForm" class="inline-form">
+                <input id="departmentName" type="text" placeholder="부서명" required />
+                <button class="button" type="submit">추가</button>
+              </form>
+              <div id="departmentList" class="compact-list"></div>
+            </section>
+
+            <section class="panel admin-card">
+              <p class="eyebrow">직원 관리</p>
+              <h2>직원 정보 등록</h2>
+              <p class="hint">먼저 Supabase Authentication에서 사용자를 만들고, 생성된 Auth User ID를 아래에 입력합니다.</p>
+              <form id="employeeForm" class="stacked-form">
+                <label>부서<select id="adminDepartmentSelect" required></select></label>
+                <label>직원명<input id="employeeName" type="text" required /></label>
+                <label>로그인 문자열<input id="employeeLoginEmail" type="email" required placeholder="emp_sales_001@project.local" /></label>
+                <label>Auth User ID<input id="employeeAuthUid" type="text" required placeholder="Supabase auth.users id" /></label>
+                <label>권한
+                  <select id="employeeRole" required>
+                    <option value="employee">일반 직원</option>
+                    <option value="department_manager">부서장</option>
+                    <option value="admin">관리자</option>
+                  </select>
+                </label>
+                <button class="button" type="submit">직원 정보 저장</button>
+              </form>
+              <div id="employeeList" class="compact-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="passwordSection" class="tab-panel hidden">
+          <section class="panel password-panel">
+            <p class="eyebrow">비밀번호 변경</p>
+            <h2>본인 비밀번호 변경</h2>
+            <form id="passwordForm" class="stacked-form narrow-form">
+              <label>새 비밀번호<input id="newPassword" type="password" minlength="4" required autocomplete="new-password" /></label>
+              <label>새 비밀번호 확인<input id="confirmPassword" type="password" minlength="4" required autocomplete="new-password" /></label>
+              <button class="button" type="submit">변경</button>
+            </form>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>Supabase 무료 플랜 + GitHub Pages 정적 사이트</span>
+      <a href="docs/출장관리_구현안.md">구현 계획 보기</a>
+    </footer>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
