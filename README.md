@@ -14,12 +14,10 @@ GitHub Pages에 배포 가능한 정적 프론트엔드와 Supabase 무료 플�
 
 자세한 단계는 [`docs/Supabase_setup.md`](./docs/Supabase_setup.md) 를 참고하세요. 요약은 다음과 같습니다.
 
-1. Supabase 프로젝트를 만들고 `supabase/migrations/001_initial_schema.sql`을 SQL Editor에서 실행합니다.
-2. Supabase Authentication에서 직원을 사용자로 추가하고 초기 비밀번호를 설정합니다.
-3. `employees` 테이블에 해당 직원 정보를 추가하고 `auth_user_id`와 `login_email`을 맞춥니다.
-4. 아래 «로컬에서 실행» 또는 GitHub Pages 배포로 사이트를 열고, Supabase 설정 패널에 project URL과 anon key를 입력합니다.
-
-정적 배포 시에는 `src/config.js`의 `DEFAULT_SUPABASE_URL`, `DEFAULT_SUPABASE_ANON_KEY`에 공개 가능한 값을 넣거나, 브라우저 설정 패널을 사용합니다. `service_role` 키는 절대 브라우저 코드에 넣지 않습니다.
+1. Supabase 프로젝트를 만들고 `supabase/migrations/001_initial_schema.sql`, `002_mark_own_password_changed_rpc.sql`, `003_employee_login_id.sql`을 순서대로 SQL Editor에서 실행합니다.
+2. 기본 관리자 Auth 사용자를 만들고 `supabase/seed/default_admin.sql`로 직원 정보와 연결합니다.
+3. 직원은 관리자 화면에서 부서, ID, 이름, 초기 비밀번호만 입력해 등록합니다. 앱이 내부 Auth 이메일과 UID 연결을 자동 처리합니다.
+4. 아래 «로컬에서 실행» 또는 GitHub Pages 배포로 사이트를 엽니다. 기본 화면은 직원 로그인이며, URL·anon key는 **우측 상단 «관리자 로그인»**에서 저장하거나, `src/config.js`의 `DEFAULT_SUPABASE_URL`, `DEFAULT_SUPABASE_ANON_KEY`에 공개 가능한 값을 넣어 두면 직원이 별도로 입력하지 않습니다. `service_role` 키는 절대 브라우저 코드에 넣지 않습니다.
 
 ### 로컬에서 실행
 

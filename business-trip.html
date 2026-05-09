@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>영일 출장자 현황</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body class="page app-page">
+    <main class="wire-frame trip-page">
+      <header class="topbar">
+        <div class="brand-block compact">
+          <p class="brand-title">Youngil Business Trip</p>
+          <h1>영일 출장자 현황</h1>
+        </div>
+        <p class="current-user" data-current-user>현재접속자: <strong>-</strong></p>
+        <a class="text-link" data-logout href="index.html">[로그아웃]</a>
+      </header>
+
+      <section class="content-grid employee-trip-layout">
+        <form class="side-form" id="employeeTripForm">
+          <h2>출장등록</h2>
+          <label>출장시작일<input id="tripStartDate" type="date" /></label>
+          <label>출장종료일<input id="tripEndDate" type="date" /></label>
+          <label>국가<select id="tripCountry"><option value="">국가선택</option></select></label>
+          <label>방문업체명<select id="tripCompany"><option value="">업체명 선택</option></select></label>
+          <label>비고 <span>(선택)</span><textarea id="tripNote" rows="2" placeholder="필요시 입력"></textarea></label>
+          <div class="button-row">
+            <button class="primary-button" type="submit">저장</button>
+            <button class="muted-button" type="reset">초기화</button>
+            <button class="warning-button" id="tripDeleteButton" type="button" disabled>삭제</button>
+          </div>
+        </form>
+
+        <section class="list-panel">
+          <p class="notice">※현재 출장에 이어서 추가 출장이 있으신 직원분은, 비고에 상세히 기록후, 현재 출장기간 종료되면 업데이트 하시기 바랍니다.<br />※방문업체명이 리스트에 없는경우 시스템 관리자에게 연락바랍니다.</p>
+          <div class="filter-tabs" aria-label="출장 구분">
+            <select class="department-filter" id="tripDepartmentFilter" aria-label="부서명">
+              <option value="">부서전체</option>
+            </select>
+            <a class="filter-tab" href="#current">출장중</a>
+            <a class="filter-tab" href="#upcoming">출장예정</a>
+            <a class="filter-tab active" href="#all">출장전체</a>            
+            <a class="filter-tab" href="#domestic">국내<br />출장</a>
+            <a class="filter-tab" href="#overseas">해외<br />출장</a>
+          </div>
+          <div class="trip-table-toolbar">
+            <div class="trip-stats" data-trip-stats>
+              <span>[출장중: 0명]</span><span>[출장예정: 0명]</span><span>[국내출장: 0명]</span><span>[해외출장: 0명]</span>
+            </div>
+            <div class="trip-table-actions">
+              <button class="muted-button excel-upload-button" id="tripUploadButton" type="button">출장 엑셀업로드</button>
+              <button class="muted-button" id="tripDownloadButton" type="button">엑셀 다운로드</button>
+              <input id="tripUploadInput" type="file" accept=".xlsx" hidden />
+            </div>
+          </div>
+          <div class="table-wrap trip-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>직급</th>
+                  <th>부서명</th>
+                  <th>국가</th>
+                  <th>업체명</th>
+                  <th>출장기간</th>
+                  <th>비고</th>
+                </tr>
+              </thead>
+              <tbody data-trip-table>
+                <tr><td colspan="7">DB 데이터를 불러오는 중입니다.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <nav class="pagination" aria-label="페이지">
+            <a href="#first">[처음]</a><a href="#prev">[이전]</a><strong>1</strong><a href="#page-2">2</a><a href="#page-3">3</a><a href="#page-4">4</a><a href="#page-5">5</a><a href="#next">[다음]</a><a href="#last">[마지막]</a>
+          </nav>
+        </section>
+      </section>
+    </main>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

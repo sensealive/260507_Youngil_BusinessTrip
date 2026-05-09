@@ -1,16 +1,82 @@
-﻿import { fetchCurrentProfile } from "./store.js";
+import { resolveAuthEmailFromAdminId } from "./config.js";
+import { createEphemeralSupabaseClient } from "./supabase.js";
+import { fetchCurrentProfile } from "./store.js";
+
+function isInvalidCredentials(error) {
+  return error?.message === "Invalid login credentials";
+}
+
+function isAlreadyRegistered(error) {
+  return String(error?.message || "").includes("User already registered");
+}
+
+export async function signInAsAdmin(client, adminId, password) {
+  const email = resolveAuthEmailFromAdminId(adminId);
+  if (!email) throw new Error("관리자 아이디를 입력하세요.");
+  const { data, error } = await client.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (isInvalidCredentials(error)) {
+    throw new Error(
+      `관리자 Auth 계정(${email}) 또는 비밀번호가 맞지 않습니다. Supabase Authentication에 해당 사용자를 만들고 Auto Confirm을 켠 뒤, 콘솔에 설정한 비밀번호로 로그인하세요.`
+    );
+  }
+  if (error) throw error;
+  return data;
+}
 
 export async function signInSelectedEmployee(client, employee, password) {
   if (!employee?.login_email) {
-    throw new Error("선택한 직원의 로그인 문자열이 없습니다.");
+    throw new Error("선택한 직원의 로그인 ID 연결 정보가 없습니다.");
   }
 
   const { data, error } = await client.auth.signInWithPassword({
     email: employee.login_email,
     password,
   });
+  if (isInvalidCredentials(error)) {
+    throw new Error(
+      `직원 Auth 계정(${employee.login_email}) 또는 비밀번호가 맞지 않습니다. 직원 정보 행만 있고 Supabase Authentication 사용자가 없으면 로그인할 수 없으니, 관리자 페이지에서 직원을 다시 등록하거나 Authentication 사용자를 확인해주세요.`
+    );
+  }
   if (error) throw error;
   return data;
+}
+
+export async function createEmployeeAuthUser(email, password) {
+  const client = await createEphemeralSupabaseClient();
+  const { data, error } = await client.auth.signUp({
+    email,
+    password,
+  });
+  if (error) throw error;
+  if (!data.user?.id) {
+    throw new Error("Auth 사용자를 만들었지만 사용자 ID를 가져오지 못했습니다.");
+  }
+  await client.auth.signOut();
+  return data.user.id;
+}
+
+export async function ensureEmployeeAuthUser(email, password) {
+  try {
+    return await createEmployeeAuthUser(email, password);
+  } catch (error) {
+    if (!isAlreadyRegistered(error)) throw error;
+  }
+
+  const client = await createEphemeralSupabaseClient();
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (isInvalidCredentials(error)) {
+    throw new Error(
+      `Auth 계정(${email})은 이미 존재하지만 입력한 비밀번호가 맞지 않습니다. Supabase Authentication에서 해당 사용자 비밀번호를 변경하거나, 같은 비밀번호로 다시 저장해주세요.`
+    );
+  }
+  if (error) throw error;
+  const userId = data.user?.id;
+  await client.auth.signOut();
+  if (!userId) throw new Error(`Auth 계정(${email})의 사용자 ID를 가져오지 못했습니다.`);
+  return userId;
 }
 
 export async function loadSignedInProfile(client) {

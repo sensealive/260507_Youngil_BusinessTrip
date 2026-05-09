@@ -1,22 +1,30 @@
-﻿import { clearRuntimeConfig, hasRuntimeConfig, loadRuntimeConfig, saveRuntimeConfig } from "./config.js";
+﻿import { clearRuntimeConfig, hasEffectiveSupabaseConfig, loadRuntimeConfig, saveRuntimeConfig } from "./config.js";
 import { getSupabaseClient } from "./supabase.js";
-import { changePassword, loadSignedInProfile, signInSelectedEmployee, signOut } from "./auth.js";
+import { changePassword, loadSignedInProfile, signInAsAdmin, signInSelectedEmployee, signOut } from "./auth.js";
 import {
   cancelTrip,
   createDepartment,
   createEmployee,
   createTrip,
+  deactivateDepartment,
+  deactivateEmployee,
   fetchCountries,
   fetchDepartments,
   fetchEmployees,
   fetchTrips,
   markPasswordChanged,
+  updateDepartment,
+  updateEmployee,
+  upsertDepartments,
+  upsertEmployees,
   updateTrip,
 } from "./store.js";
 import { defaultTripScopeLabel, isAdmin, roleLabel } from "./permissions.js";
 import { bindTripCardActions, clearTripForm, escapeHtml, fillTripForm, normalizeTripForm, renderCurrentTripCards, renderTripCards } from "./trips.js";
 import { buildStats, isTripCurrent } from "./stats.js";
 import { renderDepartments, renderEmployees } from "./admin.js";
+import { normalizeEmployeeLoginId, resolveAuthEmailFromEmployeeId } from "./config.js";
+import { createEmployeeAuthUser } from "./auth.js";
 
 const state = {
   client: null,
@@ -29,20 +37,24 @@ const state = {
 
 const els = {
   messageBox: document.querySelector("#messageBox"),
-  setupPanel: document.querySelector("#setupPanel"),
-  configForm: document.querySelector("#configForm"),
-  configUrl: document.querySelector("#configUrl"),
-  configAnonKey: document.querySelector("#configAnonKey"),
-  clearConfigButton: document.querySelector("#clearConfigButton"),
+  messageText: document.querySelector("#messageText"),
+  messageCopyButton: document.querySelector("#messageCopyButton"),
+  adminLoginOverlay: document.querySelector("#adminLoginOverlay"),
+  adminLoginForm: document.querySelector("#adminLoginForm"),
+  adminDialogClose: document.querySelector("#adminDialogClose"),
+  adminClearConfigButton: document.querySelector("#adminClearConfigButton"),
+  adminConfigUrl: document.querySelector("#adminConfigUrl"),
+  adminConfigAnonKey: document.querySelector("#adminConfigAnonKey"),
+  adminIdInput: document.querySelector("#adminIdInput"),
+  adminPasswordInput: document.querySelector("#adminPasswordInput"),
+  adminLoginButton: document.querySelector("#adminLoginButton"),
   loginPanel: document.querySelector("#loginPanel"),
   loginForm: document.querySelector("#loginForm"),
   departmentSelect: document.querySelector("#departmentSelect"),
-  employeeSelect: document.querySelector("#employeeSelect"),
+  employeeLoginIdInput: document.querySelector("#employeeLoginIdInput"),
   passwordInput: document.querySelector("#passwordInput"),
-  showSetupButton: document.querySelector("#showSetupButton"),
   dashboard: document.querySelector("#dashboard"),
-  sessionBadge: document.querySelector("#sessionBadge"),
-  logoutButton: document.querySelector("#logoutButton"),
+  authLinkButton: document.querySelector("#authLinkButton"),
   welcomeTitle: document.querySelector("#welcomeTitle"),
   roleSummary: document.querySelector("#roleSummary"),
   currentTripCount: document.querySelector("#currentTripCount"),
@@ -60,9 +72,18 @@ const els = {
   departmentForm: document.querySelector("#departmentForm"),
   departmentName: document.querySelector("#departmentName"),
   departmentList: document.querySelector("#departmentList"),
+  departmentExportButton: document.querySelector("#departmentExportButton"),
+  departmentImportButton: document.querySelector("#departmentImportButton"),
+  departmentImportFile: document.querySelector("#departmentImportFile"),
   employeeForm: document.querySelector("#employeeForm"),
   adminDepartmentSelect: document.querySelector("#adminDepartmentSelect"),
+  employeeLoginId: document.querySelector("#employeeLoginId"),
+  employeeInitialPassword: document.querySelector("#employeeInitialPassword"),
   employeeList: document.querySelector("#employeeList"),
+  employeeBulkSaveButton: document.querySelector("#employeeBulkSaveButton"),
+  employeeExportButton: document.querySelector("#employeeExportButton"),
+  employeeImportButton: document.querySelector("#employeeImportButton"),
+  employeeImportFile: document.querySelector("#employeeImportFile"),
   passwordForm: document.querySelector("#passwordForm"),
   newPassword: document.querySelector("#newPassword"),
   confirmPassword: document.querySelector("#confirmPassword"),
@@ -82,39 +103,49 @@ init();
 
 async function init() {
   bindEvents();
-  fillConfigForm();
-
-  if (!hasRuntimeConfig()) {
-    showSetup(true);
-    showMessage("Supabase 설정을 입력하면 앱을 시작할 수 있습니다.", "info");
-    return;
-  }
-
+  els.loginPanel.classList.remove("hidden");
+  els.dashboard.classList.add("hidden");
   await bootSupabase();
 }
 
 function bindEvents() {
-  els.configForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    saveRuntimeConfig({ url: els.configUrl.value, anonKey: els.configAnonKey.value });
-    showMessage("Supabase 설정을 저장했습니다.", "success");
-    await bootSupabase();
-  });
-
-  els.clearConfigButton.addEventListener("click", () => {
+  els.messageCopyButton.addEventListener("click", copyCurrentMessage);
+  els.adminLoginButton.addEventListener("click", () => openAdminLogin());
+  els.adminDialogClose.addEventListener("click", () => closeAdminLogin());
+  els.adminClearConfigButton.addEventListener("click", () => {
     clearRuntimeConfig();
+    closeAdminLogin();
     location.reload();
   });
+  els.adminLoginOverlay.addEventListener("click", (event) => {
+    if (event.target === els.adminLoginOverlay) closeAdminLogin();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (els.adminLoginOverlay.classList.contains("hidden")) return;
+    closeAdminLogin();
+  });
+  els.adminLoginForm.addEventListener("submit", handleAdminLoginSubmit);
 
-  els.showSetupButton.addEventListener("click", () => showSetup(true));
-  els.departmentSelect.addEventListener("change", populateEmployeeSelect);
+  els.authLinkButton.addEventListener("click", handleAuthLinkClick);
+  els.departmentSelect.addEventListener("change", () => {
+    els.employeeLoginIdInput.value = "";
+  });
   els.loginForm.addEventListener("submit", handleLogin);
-  els.logoutButton.addEventListener("click", handleLogout);
   els.refreshButton.addEventListener("click", refreshAppData);
   els.tripForm.addEventListener("submit", handleTripSubmit);
   els.resetTripFormButton.addEventListener("click", resetTripForm);
   els.departmentForm.addEventListener("submit", handleDepartmentSubmit);
+  els.departmentList.addEventListener("click", handleDepartmentListClick);
+  els.departmentExportButton.addEventListener("click", exportDepartments);
+  els.departmentImportButton.addEventListener("click", () => els.departmentImportFile.click());
+  els.departmentImportFile.addEventListener("change", handleDepartmentImport);
   els.employeeForm.addEventListener("submit", handleEmployeeSubmit);
+  els.employeeList.addEventListener("click", handleEmployeeListClick);
+  els.employeeBulkSaveButton.addEventListener("click", handleEmployeeBulkSave);
+  els.employeeExportButton.addEventListener("click", exportEmployees);
+  els.employeeImportButton.addEventListener("click", () => els.employeeImportFile.click());
+  els.employeeImportFile.addEventListener("change", handleEmployeeImport);
   els.passwordForm.addEventListener("submit", handlePasswordSubmit);
 
   document.querySelectorAll(".tab").forEach((button) => {
@@ -122,16 +153,68 @@ function bindEvents() {
   });
 }
 
-function fillConfigForm() {
+function fillAdminDialogFromConfig() {
   const config = loadRuntimeConfig();
-  els.configUrl.value = config.url || "";
-  els.configAnonKey.value = config.anonKey || "";
+  els.adminConfigUrl.value = config.url || "";
+  els.adminConfigAnonKey.value = config.anonKey || "";
+}
+
+function openAdminLogin() {
+  fillAdminDialogFromConfig();
+  els.adminLoginOverlay.classList.remove("hidden");
+  window.requestAnimationFrame(() => {
+    const config = loadRuntimeConfig();
+    if (hasEffectiveSupabaseConfig(config)) {
+      els.adminIdInput.focus();
+    } else {
+      els.adminConfigUrl.focus();
+    }
+  });
+}
+
+function closeAdminLogin() {
+  els.adminLoginOverlay.classList.add("hidden");
+}
+
+async function handleAdminLoginSubmit(event) {
+  event.preventDefault();
+  try {
+    saveRuntimeConfig({
+      url: els.adminConfigUrl.value,
+      anonKey: els.adminConfigAnonKey.value,
+    });
+    state.client = await getSupabaseClient();
+    await signInAsAdmin(state.client, els.adminIdInput.value, els.adminPasswordInput.value);
+    els.adminPasswordInput.value = "";
+    state.profile = await loadSignedInProfile(state.client);
+    if (!state.profile) throw new Error("로그인 계정과 직원 정보가 연결되어 있지 않습니다.");
+    if (!isAdmin(state.profile)) {
+      await signOut(state.client);
+      state.profile = null;
+      throw new Error("관리자 권한이 아닌 계정입니다.");
+    }
+    closeAdminLogin();
+    await enterDashboard();
+    activateTab("adminSection");
+    showMessage("관리자로 로그인했습니다.", "success");
+  } catch (error) {
+    showMessage(error.message || "관리자 로그인에 실패했습니다.", "error");
+  }
 }
 
 async function bootSupabase() {
   try {
-    state.client = getSupabaseClient();
-    showSetup(false);
+    if (!hasEffectiveSupabaseConfig()) {
+      state.client = null;
+      state.departments = [];
+      state.employees = [];
+      populateDepartmentSelects();
+      state.profile = null;
+      showLogin();
+      showMessage("우측 상단 «관리자 로그인»에서 Supabase 연결 정보를 저장한 뒤 이용할 수 있습니다.", "info");
+      return;
+    }
+    state.client = await getSupabaseClient();
     await loadPublicLoginData();
     state.profile = await loadSignedInProfile(state.client);
     if (state.profile) {
@@ -141,8 +224,13 @@ async function bootSupabase() {
     }
   } catch (error) {
     console.error(error);
-    showSetup(true);
-    showMessage(error.message || "Supabase 연결에 실패했습니다.", "error");
+    state.client = null;
+    state.departments = [];
+    state.employees = [];
+    populateDepartmentSelects();
+    state.profile = null;
+    showLogin();
+    showMessage(error.message || "서버 연결에 실패했습니다. 관리자 로그인에서 설정을 확인하세요.", "error");
   }
 }
 
@@ -150,7 +238,6 @@ async function loadPublicLoginData() {
   state.departments = await fetchDepartments(state.client);
   state.employees = await fetchEmployees(state.client);
   populateDepartmentSelects();
-  populateEmployeeSelect();
 }
 
 function populateDepartmentSelects() {
@@ -159,17 +246,24 @@ function populateDepartmentSelects() {
   els.adminDepartmentSelect.innerHTML = `<option value="">부서 선택</option>${options}`;
 }
 
-function populateEmployeeSelect() {
-  const departmentId = els.departmentSelect.value;
-  const employees = state.employees.filter((employee) => employee.department_id === departmentId);
-  els.employeeSelect.innerHTML = `<option value="">이름 선택</option>${employees.map((employee) => `<option value="${employee.id}">${escapeHtml(employee.name)}</option>`).join("")}`;
-}
-
 async function handleLogin(event) {
   event.preventDefault();
-  const employee = state.employees.find((item) => item.id === els.employeeSelect.value);
+  if (!state.client) {
+    showMessage("연결 정보가 없습니다. 우측 상단 «관리자 로그인»에서 Supabase URL·키를 저장해 주세요.", "error");
+    return;
+  }
+  const loginId = normalizeEmployeeLoginId(els.employeeLoginIdInput.value);
+  const employee = state.employees.find((item) => (
+    item.department_id === els.departmentSelect.value
+    && normalizeEmployeeLoginId(item.login_id || item.login_email?.split("@")[0]) === loginId
+  ));
+  if (!employee) {
+    showMessage("부서와 ID가 일치하는 직원을 찾지 못했습니다.", "error");
+    return;
+  }
   try {
     await signInSelectedEmployee(state.client, employee, els.passwordInput.value);
+    els.employeeLoginIdInput.value = "";
     els.passwordInput.value = "";
     state.profile = await loadSignedInProfile(state.client);
     if (!state.profile) throw new Error("로그인 계정과 직원 정보가 연결되어 있지 않습니다.");
@@ -180,12 +274,21 @@ async function handleLogin(event) {
   }
 }
 
+async function handleAuthLinkClick() {
+  if (state.profile) {
+    await handleLogout();
+    return;
+  }
+  showLogin();
+  els.loginPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 async function enterDashboard() {
   els.loginPanel.classList.add("hidden");
   els.dashboard.classList.remove("hidden");
-  els.logoutButton.classList.remove("hidden");
-  els.sessionBadge.textContent = `${state.profile.name} · ${roleLabel(state.profile.role)}`;
-  els.sessionBadge.className = "badge badge-live";
+  els.adminLoginButton.classList.add("hidden");
+  els.authLinkButton.textContent = "로그아웃";
+  els.authLinkButton.setAttribute("aria-label", `${state.profile.name}님 로그아웃`);
   els.welcomeTitle.textContent = `${state.profile.name}님, 안녕하세요.`;
   els.roleSummary.textContent = `${departmentName(state.profile.department_id)} / ${roleLabel(state.profile.role)} 권한으로 조회합니다.`;
   document.querySelectorAll(".admin-only").forEach((el) => el.classList.toggle("hidden", !isAdmin(state.profile)));
@@ -199,9 +302,9 @@ async function enterDashboard() {
 function showLogin() {
   els.loginPanel.classList.remove("hidden");
   els.dashboard.classList.add("hidden");
-  els.logoutButton.classList.add("hidden");
-  els.sessionBadge.textContent = "로그아웃";
-  els.sessionBadge.className = "badge badge-muted";
+  els.adminLoginButton.classList.remove("hidden");
+  els.authLinkButton.textContent = "로그인";
+  els.authLinkButton.setAttribute("aria-label", "로그인 화면으로 이동");
 }
 
 async function refreshAppData() {
@@ -266,7 +369,7 @@ function statGroup(title, rows) {
 function renderAdmin(departmentsById) {
   if (!isAdmin(state.profile)) return;
   els.departmentList.innerHTML = renderDepartments(state.departments);
-  els.employeeList.innerHTML = renderEmployees(state.employees, departmentsById);
+  els.employeeList.innerHTML = renderEmployees(state.employees, state.departments);
 }
 
 async function handleTripSubmit(event) {
@@ -325,31 +428,334 @@ async function handleDepartmentSubmit(event) {
   }
 }
 
+async function handleDepartmentListClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button || !isAdmin(state.profile)) return;
+  const row = button.closest("[data-department-id]");
+  if (!row) return;
+
+  const departmentId = row.dataset.departmentId;
+  try {
+    if (button.dataset.action === "save-department") {
+      await updateDepartment(state.client, departmentId, {
+        name: row.querySelector('[data-field="department-name"]').value,
+        isActive: row.querySelector('[data-field="department-active"]').checked,
+      });
+      showMessage("부서 정보를 수정했습니다.", "success");
+    }
+    if (button.dataset.action === "deactivate-department") {
+      if (!confirm("이 부서를 삭제 처리할까요? 기존 출장 기록 보존을 위해 비활성화됩니다.")) return;
+      await deactivateDepartment(state.client, departmentId);
+      showMessage("부서를 비활성화했습니다.", "success");
+    }
+    await refreshAppData();
+  } catch (error) {
+    showMessage(error.message || "부서 정보를 저장하지 못했습니다.", "error");
+  }
+}
+
 async function handleEmployeeSubmit(event) {
   event.preventDefault();
   if (!isAdmin(state.profile)) return;
   try {
+    const loginId = normalizeEmployeeLoginId(els.employeeLoginId.value);
+    const loginEmail = resolveAuthEmailFromEmployeeId(loginId);
+    const authUserId = await createEmployeeAuthUser(loginEmail, els.employeeInitialPassword.value);
     await createEmployee(state.client, {
       departmentId: els.adminDepartmentSelect.value,
+      loginId,
       name: document.querySelector("#employeeName").value,
-      loginEmail: document.querySelector("#employeeLoginEmail").value,
-      authUserId: document.querySelector("#employeeAuthUid").value,
+      loginEmail,
+      authUserId,
       role: document.querySelector("#employeeRole").value,
     });
     els.employeeForm.reset();
-    showMessage("직원 정보를 저장했습니다. 비밀번호 자체는 Supabase 콘솔에서 관리하세요.", "success");
+    showMessage("직원을 등록했습니다.", "success");
     await refreshAppData();
   } catch (error) {
     showMessage(error.message || "직원 정보를 저장하지 못했습니다.", "error");
   }
 }
 
+async function handleEmployeeListClick(event) {
+  const button = event.target.closest("button[data-action]");
+  if (!button || !isAdmin(state.profile)) return;
+  const row = button.closest("[data-employee-id]");
+  if (!row) return;
+
+  const employeeId = row.dataset.employeeId;
+  try {
+    if (button.dataset.action === "save-employee") {
+      await updateEmployee(state.client, employeeId, readEmployeeRow(row));
+      showMessage("직원 정보를 수정했습니다.", "success");
+    }
+    if (button.dataset.action === "deactivate-employee") {
+      if (!confirm("이 직원을 삭제 처리할까요? 기존 출장 기록 보존을 위해 비활성화됩니다.")) return;
+      await deactivateEmployee(state.client, employeeId);
+      showMessage("직원을 비활성화했습니다.", "success");
+    }
+    await refreshAppData();
+  } catch (error) {
+    showMessage(error.message || "직원 정보를 저장하지 못했습니다.", "error");
+  }
+}
+
+async function handleEmployeeBulkSave() {
+  if (!isAdmin(state.profile)) return;
+  const rows = Array.from(els.employeeList.querySelectorAll("[data-employee-id]"));
+  if (!rows.length) {
+    showMessage("저장할 직원 정보가 없습니다.", "info");
+    return;
+  }
+  try {
+    for (const row of rows) {
+      await updateEmployee(state.client, row.dataset.employeeId, readEmployeeRow(row));
+    }
+    showMessage(`직원 ${rows.length}명의 정보를 저장했습니다.`, "success");
+    await refreshAppData();
+  } catch (error) {
+    showMessage(error.message || "직원 정보를 일괄 저장하지 못했습니다.", "error");
+  }
+}
+
+function readEmployeeRow(row) {
+  const existingEmployee = state.employees.find((employee) => employee.id === row.dataset.employeeId);
+  const loginId = normalizeEmployeeLoginId(existingEmployee.login_id || existingEmployee.login_email?.split("@")[0]);
+  return {
+    departmentId: row.querySelector('[data-field="employee-department"]').value,
+    name: row.querySelector('[data-field="employee-name"]').value,
+    role: row.querySelector('[data-field="employee-role"]').value,
+    loginId,
+    loginEmail: resolveAuthEmailFromEmployeeId(loginId),
+    authUserId: existingEmployee.auth_user_id,
+    isActive: row.querySelector('[data-field="employee-active"]').checked,
+    mustChangePassword: row.querySelector('[data-field="employee-must-change-password"]').checked,
+  };
+}
+
+function exportDepartments() {
+  const rows = state.departments.map((department) => ({
+    name: department.name,
+    is_active: department.is_active,
+  }));
+  downloadSheet("youngil_departments.xls", rows, ["name", "is_active"]);
+}
+
+async function handleDepartmentImport(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file || !isAdmin(state.profile)) return;
+
+  try {
+    const rows = parseCsv(await file.text());
+    const payload = rows.map((row, index) => {
+      const name = requiredCell(row, "name", index);
+      return {
+        name,
+        is_active: parseBoolean(row.is_active, true),
+      };
+    });
+    await upsertDepartments(state.client, payload);
+    showMessage(`부서 ${payload.length}건을 업로드했습니다.`, "success");
+    await refreshAppData();
+  } catch (error) {
+    showMessage(error.message || "부서 업로드에 실패했습니다.", "error");
+  }
+}
+
+function exportEmployees() {
+  const departmentsById = new Map(state.departments.map((department) => [department.id, department]));
+  const rows = state.employees.map((employee) => ({
+    department: departmentsById.get(employee.department_id)?.name || "",
+    login_id: employee.login_id || employee.login_email?.split("@")[0] || "",
+    name: employee.name,
+    role: employee.role,
+    password: "",
+    is_active: employee.is_active,
+    must_change_password: employee.must_change_password,
+  }));
+  downloadSheet("youngil_employees.xls", rows, [
+    "department",
+    "login_id",
+    "name",
+    "password",
+    "role",
+    "is_active",
+    "must_change_password",
+  ]);
+}
+
+async function handleEmployeeImport(event) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!file || !isAdmin(state.profile)) return;
+
+  try {
+    const rows = parseCsv(await file.text());
+    const departmentsByName = new Map(state.departments.map((department) => [department.name, department]));
+    const employeesByLoginId = new Map(state.employees.map((employee) => [
+      normalizeEmployeeLoginId(employee.login_id || employee.login_email?.split("@")[0]),
+      employee,
+    ]));
+    const payload = [];
+
+    for (const [index, row] of rows.entries()) {
+      const departmentNameValue = requiredCell(row, "department", index);
+      const department = departmentsByName.get(departmentNameValue);
+      if (!department) {
+        throw new Error(`${index + 2}행: 부서 '${departmentNameValue}'를 먼저 등록하세요.`);
+      }
+      const loginId = normalizeEmployeeLoginId(requiredCell(row, "login_id", index));
+      const existingEmployee = employeesByLoginId.get(loginId);
+      let authUserId = existingEmployee?.auth_user_id;
+      if (!authUserId) {
+        const password = requiredCell(row, "password", index);
+        authUserId = await createEmployeeAuthUser(resolveAuthEmailFromEmployeeId(loginId), password);
+      }
+      payload.push({
+        department_id: department.id,
+        login_id: loginId,
+        name: requiredCell(row, "name", index),
+        role: normalizeRole(row.role, index),
+        login_email: resolveAuthEmailFromEmployeeId(loginId),
+        auth_user_id: authUserId,
+        is_active: parseBoolean(row.is_active, true),
+        must_change_password: parseBoolean(row.must_change_password, true),
+      });
+    }
+    await upsertEmployees(state.client, payload);
+    showMessage(`직원 ${payload.length}건을 업로드했습니다.`, "success");
+    await refreshAppData();
+  } catch (error) {
+    showMessage(error.message || "직원 업로드에 실패했습니다.", "error");
+  }
+}
+
+function downloadSheet(filename, rows, columns) {
+  const text = [
+    columns.join("\t"),
+    ...rows.map((row) => columns.map((column) => sheetCell(row[column])).join("\t")),
+  ].join("\r\n");
+  const blob = new Blob([encodeUtf16Le(text)], { type: "application/vnd.ms-excel;charset=utf-16le" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function sheetCell(value) {
+  const text = String(value ?? "");
+  return text.replaceAll("\t", " ").replaceAll("\r", " ").replaceAll("\n", " ");
+}
+
+function encodeUtf16Le(text) {
+  const buffer = new ArrayBuffer((text.length + 1) * 2);
+  const view = new DataView(buffer);
+  view.setUint16(0, 0xfeff, true);
+  for (let i = 0; i < text.length; i += 1) {
+    view.setUint16((i + 1) * 2, text.charCodeAt(i), true);
+  }
+  return buffer;
+}
+
+function parseCsv(text) {
+  const normalizedText = text.replace(/^\ufeff/, "");
+  const firstLine = normalizedText.split(/\r?\n/, 1)[0] || "";
+  if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length) {
+    return rowsToObjects(
+      normalizedText
+        .split(/\r?\n/)
+        .map((line) => line.split("\t").map((cell) => cell.trim()))
+        .filter((items) => items.some(Boolean))
+    );
+  }
+
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let quoted = false;
+  const source = normalizedText;
+
+  for (let i = 0; i < source.length; i += 1) {
+    const char = source[i];
+    const next = source[i + 1];
+    if (quoted) {
+      if (char === '"' && next === '"') {
+        cell += '"';
+        i += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        cell += char;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (char === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else if (char !== "\r") {
+      cell += char;
+    }
+  }
+  row.push(cell);
+  rows.push(row);
+
+  const nonEmptyRows = rows.filter((items) => items.some((item) => item.trim()));
+  return rowsToObjects(nonEmptyRows);
+}
+
+function rowsToObjects(rows) {
+  if (rows.length < 2) throw new Error("업로드할 데이터가 없습니다.");
+  const firstRow = rows[0].map((item) => item.trim());
+  const hasHeader = firstRow.includes("department") || firstRow.includes("login_id") || firstRow.includes("name");
+  const headers = hasHeader
+    ? firstRow
+    : ["department", "login_id", "name", "password", "role", "is_active", "must_change_password"];
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  return dataRows.map((items) => Object.fromEntries(headers.map((header, index) => [header, (items[index] || "").trim()])));
+}
+
+function requiredCell(row, key, index) {
+  const value = String(row[key] || "").trim();
+  if (!value) throw new Error(`${index + 2}행: '${key}' 값이 필요합니다.`);
+  return value;
+}
+
+function parseBoolean(value, defaultValue) {
+  const text = String(value ?? "").trim().toLowerCase();
+  if (!text) return defaultValue;
+  return ["1", "true", "yes", "y", "사용", "활성"].includes(text);
+}
+
+function normalizeRole(value, index) {
+  const role = String(value || "employee").trim();
+  if (["employee", "department_manager", "admin"].includes(role)) return role;
+  const roleMap = {
+    일반직원: "employee",
+    직원: "employee",
+    일반: "employee",
+    부서장: "department_manager",
+    관리자: "admin",
+  };
+  if (roleMap[role]) return roleMap[role];
+  throw new Error(`${index + 2}행: role은 employee, department_manager, admin 중 하나여야 합니다.`);
+}
+
 async function handlePasswordSubmit(event) {
   event.preventDefault();
   const newPassword = els.newPassword.value;
   const confirmPassword = els.confirmPassword.value;
-  if (newPassword.length < 4) {
-    showMessage("새 비밀번호는 4자 이상이어야 합니다.", "error");
+  if (newPassword.length < 6) {
+    showMessage("새 비밀번호는 6자 이상이어야 합니다.", "error");
     return;
   }
   if (newPassword !== confirmPassword) {
@@ -358,7 +764,7 @@ async function handlePasswordSubmit(event) {
   }
   try {
     await changePassword(state.client, newPassword);
-    await markPasswordChanged(state.client, state.profile.id);
+    await markPasswordChanged(state.client);
     els.passwordForm.reset();
     showMessage("비밀번호를 변경했습니다.", "success");
     await refreshAppData();
@@ -373,10 +779,13 @@ async function handlePasswordSubmit(event) {
 
 async function handleLogout() {
   try {
-    await signOut(state.client);
+    if (state.client) await signOut(state.client);
     state.profile = null;
     state.trips = [];
     showLogin();
+    if (state.client && hasEffectiveSupabaseConfig()) {
+      await loadPublicLoginData();
+    }
     showMessage("로그아웃했습니다.", "success");
   } catch (error) {
     showMessage(error.message || "로그아웃에 실패했습니다.", "error");
@@ -392,15 +801,37 @@ function activateTab(targetId) {
   });
 }
 
-function showSetup(show) {
-  els.setupPanel.classList.toggle("hidden", !show);
+function showMessage(message, type = "info") {
+  els.messageBox.dataset.message = message;
+  els.messageText.textContent = message;
+  els.messageCopyButton.textContent = "복사";
+  els.messageBox.className = `message ${type}`;
+  els.messageBox.classList.remove("hidden");
+  window.clearTimeout(showMessage.timer);
+  showMessage.timer = window.setTimeout(() => els.messageBox.classList.add("hidden"), 3000);
 }
 
-function showMessage(message, type = "info") {
-  els.messageBox.textContent = message;
-  els.messageBox.className = `message ${type}`;
-  window.clearTimeout(showMessage.timer);
-  showMessage.timer = window.setTimeout(() => els.messageBox.classList.add("hidden"), 6000);
+async function copyCurrentMessage() {
+  const message = els.messageBox.dataset.message || els.messageText.textContent;
+  if (!message) return;
+  try {
+    await navigator.clipboard.writeText(message);
+    els.messageCopyButton.textContent = "완료";
+    window.clearTimeout(showMessage.timer);
+    showMessage.timer = window.setTimeout(() => els.messageBox.classList.add("hidden"), 3000);
+  } catch (error) {
+    const textArea = document.createElement("textarea");
+    textArea.value = message;
+    textArea.setAttribute("readonly", "");
+    textArea.className = "copy-helper";
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand("copy");
+    textArea.remove();
+    els.messageCopyButton.textContent = "완료";
+    window.clearTimeout(showMessage.timer);
+    showMessage.timer = window.setTimeout(() => els.messageBox.classList.add("hidden"), 3000);
+  }
 }
 
 function departmentName(departmentId) {

@@ -45,8 +45,11 @@
 
 1. 좌측 메뉴 **SQL Editor → + New query**.
 2. 저장소의 [`supabase/migrations/001_initial_schema.sql`](../supabase/migrations/001_initial_schema.sql) 내용을 그대로 붙여넣고 **Run** 합니다.
-3. 좌측 **Table Editor** 에서 `departments`, `employees`, `trips`, `countries`, `audit_logs` 가 생겼는지 확인합니다.
-4. 좌측 **Authentication → Policies** 에서 각 테이블에 RLS 정책이 들어가 있는지 확인합니다.
+3. 같은 방식으로 [`supabase/migrations/002_mark_own_password_changed_rpc.sql`](../supabase/migrations/002_mark_own_password_changed_rpc.sql), [`supabase/migrations/003_employee_login_id.sql`](../supabase/migrations/003_employee_login_id.sql) 을 **순서대로** 실행합니다. (`002`: 비밀번호 변경 후 `must_change_password` 해제용 함수, `003`: 직원 ID 로그인용 컬럼)
+4. 좌측 **Table Editor** 에서 `departments`, `employees`, `trips`, `countries`, `audit_logs` 가 생겼는지 확인합니다.
+5. 좌측 **Authentication → Policies** 에서 각 테이블에 RLS 정책이 들어가 있는지 확인합니다.
+
+이미 `001`·`002` 를 적용한 프로젝트라면 `003` SQL 파일만 추가로 실행하면 됩니다.
 
 ## 5. 부서/관리자 데이터 시드(최소 1행)
 
@@ -58,40 +61,35 @@ values ('관리부')
 on conflict (name) do nothing;
 ```
 
-## 6. 첫 직원(관리자) 등록
+## 6. 첫 관리자(기본값) 등록
+
+앱의 **관리자 로그인** 모달에서는 아이디 **`admin`**만 입력하면 되고, Supabase Auth와 맞추는 이메일은 **`admin@project.local`** 입니다 (`src/config.js` 의 `DEFAULT_ADMIN_AUTH_EMAIL`). 비밀번호 초기값은 Supabase 기본 비밀번호 정책에 맞춰 **6자 이상**으로 둡니다. 예: **`174100`**. 이후 Supabase 콘솔 또는 앱 비밀번호 변경으로 언제든지 바꿀 수 있습니다.
 
 ### 6-1. Auth 사용자 생성
 
 1. **Authentication → Users → Add user → Create new user**.
 2. 입력
-   - **Email**: 앱이 내부적으로 쓰는 로그인 문자열. 예: `admin_001@project.local` (실제 이메일이 아니어도 형식만 맞으면 OK)
-   - **Password**: 초기 비밀번호 (예: `temp1234`, 운영 시 즉시 변경)
+   - **Email**: `admin@project.local`
+   - **Password**: `174100` (운영 중 변경 권장)
    - **Auto Confirm User**: **ON** (이메일 인증 생략)
-3. 생성 후 행을 클릭해서 표시되는 **User UID** 를 복사합니다.
 
-### 6-2. employees 행 추가
+### 6-2. employees 행 연결
 
-SQL Editor에서 아래를 실행합니다. `auth_user_id`, `department_id`, `name`, `login_email` 만 본인 환경에 맞게 바꿉니다.
+SQL Editor에서 저장소 [`supabase/seed/default_admin.sql`](../supabase/seed/default_admin.sql) 내용을 실행합니다. («관리부»가 있어야 합니다.)
 
-```sql
-insert into public.employees (department_id, name, role, login_email, auth_user_id, must_change_password)
-select d.id, '홍길동', 'admin', 'admin_001@project.local', '여기에-Auth-UID-붙여넣기', true
-from public.departments d
-where d.name = '관리부';
-```
-
-같은 직원이 두 번 들어가지 않도록 `login_email` 은 유니크(이미 있는 값이면 거절됨)입니다.
+수동으로 넣을 때는 `employees.login_email` 과 Auth 사용자 이메일을 **`admin@project.local`** 로 맞추고, `login_email` 은 테이블에서 유니크입니다.
 
 ## 7. 앱에서 연결 테스트
 
-1. 로컬 또는 GitHub Pages에서 사이트를 엽니다.
-2. 첫 화면 «Supabase 설정» 패널에 3번에서 메모한 **Project URL** 과 **anon public** 키를 붙여넣고 **설정 저장**.
-3. 부서 드롭다운에 «관리부», 이름 드롭다운에 «홍길동» 이 보이면 OK.
-4. 6-1의 초기 비밀번호로 로그인. `must_change_password=true` 라서 비밀번호 변경 탭으로 자동 이동합니다.
+1. 로컬 또는 GitHub Pages에서 사이트를 엽니다. 첫 화면은 직원 로그인입니다.
+2. 우측 상단 **관리자 로그인**을 눌러 **Project URL** 과 **anon public** 키를 입력 후 **연결 저장 후 로그인**합니다. 같은 값을 `src/config.js` 에 기본값으로 넣어 두면 직원은 별도 연결 입력 없이 사용할 수 있습니다.
+3. 기본 관리자는 아이디 `admin`, 초기 비밀번호는 `174100`(6-1 설정과 동일)입니다.
+4. 직원 등록을 앱에서 자동 처리하려면 **Authentication → Providers → Email** 설정에서 이메일 확인(confirm email)이 꺼져 있어야 합니다. 이메일 확인이 켜져 있으면 `yh.seo@project.local` 같은 내부 이메일로 확인 메일을 받을 수 없어 직원 로그인이 막힐 수 있습니다.
+4. `must_change_password=true` 라면 비밀번호 변경 탭으로 안내됩니다.
 
 ## 8. 추가 직원 등록 (반복 작업)
 
-이후 직원은 6-1 → 6-2 패턴을 반복하면 됩니다. 부서장은 `role = 'department_manager'`, 일반 직원은 `role = 'employee'` 로 넣습니다. 자동화하려면 관리자 화면의 «직원 정보 등록» 폼에 미리 만든 Auth UID를 붙여넣는 것도 가능합니다.
+이후 직원은 관리자 화면에서 **부서, ID, 이름, 초기 비밀번호**만 입력해 등록합니다. 앱은 직원 ID를 소문자로 정규화하고 내부 Auth 이메일을 `직원ID@project.local` 형태로 자동 생성합니다. 부서장은 `role = 'department_manager'`, 일반 직원은 `role = 'employee'` 로 지정합니다.
 
 ## 9. 비밀번호 초기화 (관리자)
 

@@ -24,7 +24,9 @@ create table if not exists public.employees (
   id uuid primary key default gen_random_uuid(),
   department_id uuid not null references public.departments(id),
   name text not null,
+  position text,
   role text not null default 'employee' check (role in ('employee', 'department_manager', 'admin')),
+  login_id text not null unique,
   login_email text not null unique,
   auth_user_id uuid not null unique,
   is_active boolean not null default true,
@@ -50,6 +52,14 @@ create table if not exists public.trips (
   check (end_date >= start_date)
 );
 
+create table if not exists public.companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.audit_logs (
   id uuid primary key default gen_random_uuid(),
   actor_employee_id uuid references public.employees(id),
@@ -60,7 +70,9 @@ create table if not exists public.audit_logs (
 );
 
 create index if not exists idx_employees_department on public.employees(department_id);
+create index if not exists idx_employees_login_id on public.employees(login_id);
 create index if not exists idx_employees_auth_user on public.employees(auth_user_id);
+create index if not exists idx_companies_active on public.companies(is_active);
 create index if not exists idx_trips_employee on public.trips(employee_id);
 create index if not exists idx_trips_department on public.trips(department_id);
 create index if not exists idx_trips_dates on public.trips(start_date, end_date);
@@ -116,6 +128,7 @@ alter table public.departments enable row level security;
 alter table public.countries enable row level security;
 alter table public.employees enable row level security;
 alter table public.trips enable row level security;
+alter table public.companies enable row level security;
 alter table public.audit_logs enable row level security;
 
 drop policy if exists departments_select_public on public.departments;
@@ -138,6 +151,18 @@ using (is_active = true or public.is_admin());
 drop policy if exists countries_admin_all on public.countries;
 create policy countries_admin_all
 on public.countries for all
+to authenticated
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists companies_select_public on public.companies;
+create policy companies_select_public
+on public.companies for select
+using (is_active = true or public.is_admin());
+
+drop policy if exists companies_admin_all on public.companies;
+create policy companies_admin_all
+on public.companies for all
 to authenticated
 using (public.is_admin())
 with check (public.is_admin());
@@ -169,8 +194,11 @@ create policy trips_insert_own
 on public.trips for insert
 to authenticated
 with check (
-  employee_id = public.current_employee_id()
-  and department_id = public.current_department_id()
+  public.is_admin()
+  or (
+    employee_id = public.current_employee_id()
+    and department_id = public.current_department_id()
+  )
 );
 
 drop policy if exists trips_update_own_or_admin on public.trips;
@@ -203,5 +231,16 @@ insert into public.countries (name, sort_order) values
   ('기타', 999)
 on conflict (name) do update set
   sort_order = excluded.sort_order,
+  is_active = true,
+  updated_at = now();
+
+insert into public.companies (name) values
+  ('한국단자(멕시코)'),
+  ('한국단자(폴란드)'),
+  ('LS EVK(폴란드)'),
+  ('LS EVK(국내)'),
+  ('경주발레오(국내)'),
+  ('현대모비스(국내)')
+on conflict (name) do update set
   is_active = true,
   updated_at = now();

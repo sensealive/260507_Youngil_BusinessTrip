@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>영일 부서 및 직원 관리</title>
+    <link rel="stylesheet" href="src/styles.css" />
+  </head>
+  <body class="page app-page">
+    <main class="wire-frame manage-page">
+      <header class="topbar manage-topbar">
+        <div class="brand-block compact">
+          <p class="brand-title">Youngil 부서 및 직원 관리</p>
+          <h1>영일 출장자 현황</h1>
+        </div>
+        <p class="current-user" data-current-user>현재접속자: <strong>-</strong></p>
+        <a class="text-link" data-logout href="index.html">[로그아웃]</a>
+      </header>
+
+      <section class="manage-grid">
+        <section class="manage-block department-manage">
+          <h2>부서관리</h2>
+          <label>부서명<input id="departmentNameInput" type="text" placeholder="부서명 입력" /></label>
+          <button class="primary-button add-button" id="departmentAddButton" type="button">추가</button>
+          <div class="manage-list" id="departmentList">
+            <div class="manage-item"><span>DB 데이터를 불러오는 중입니다.</span></div>
+          </div>
+        </section>
+
+        <section class="manage-block employee-editor">
+          <h2>직원 정보 등록</h2>
+          <label>부서<select id="employeeDepartment"><option value="">부서 선택</option></select></label>
+          <label>직급<select id="employeePosition"><option value="">직급 선택</option><option>회장</option><option>부회장</option><option>대표</option><option>부사장</option><option>전무</option><option>상무</option><option>이사</option><option>부장</option><option>차장</option><option>과장</option><option>대리</option><option>주임</option><option>사원</option></select></label>
+          <label>ID<input id="employeeLoginId" type="text" placeholder="그룹웨어 계정 입력 ( 예: yh.seo )" /></label>
+          <label>직원명<input id="employeeName" type="text" /></label>
+          <label>초기 비밀번호<input id="employeePassword" type="text" placeholder="기본 174100 (6자리 이상 입력)" /></label>
+          <button class="primary-button save-employee-button" id="employeeSaveButton" type="button">직원정보 수정 & 저장</button>
+        </section>
+
+        <section class="manage-block employee-list-panel">
+          <h2>직원 리스트</h2>
+          <div class="list-actions"><button class="link-button" id="employeeDownloadButton" type="button">[직원 다운로드]</button> <button class="link-button" id="employeeUploadButton" type="button">[직원 업로드]</button><input id="employeeUploadInput" type="file" accept=".xlsx" hidden /></div>
+          <div class="table-wrap">
+            <table class="employee-list-table">
+              <thead>
+                <tr><th>순서</th><th>ID</th><th>이름</th><th>직급</th><th>부서명</th><th>관리</th></tr>
+              </thead>
+              <tbody id="employeeList">
+                <tr><td colspan="6">DB 데이터를 불러오는 중입니다.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <nav class="pagination" aria-label="페이지">
+            <a href="#first">[처음]</a><a href="#prev">[이전]</a><strong>1</strong><a href="#page-2">2</a><a href="#page-3">3</a><a href="#page-4">4</a><a href="#page-5">5</a><a href="#next">[다음]</a><a href="#last">[마지막]</a>
+          </nav>
+        </section>
+
+        <section class="manage-block company-manage">
+          <h2>업체등록(출장지)</h2>
+          <div class="company-add">
+            <input id="companyNameInput" type="text" placeholder="업체명 입력" />
+            <button class="primary-button" id="companyAddButton" type="button">추가</button>
+          </div>
+          <div class="manage-list company-list" id="companyList">
+            <div class="manage-item"><span>DB 데이터를 불러오는 중입니다.</span></div>
+          </div>
+        </section>
+      </section>
+
+      <a class="admin-page-link manage-link" href="admin-business-trip.html">관리자 페이지</a>
+    </main>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
