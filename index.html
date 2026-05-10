@@ -23,7 +23,31 @@
             <label for="loginPassword">PASSWORD</label>
             <span class="password-shell">
               <input id="loginPassword" type="password" placeholder="비밀번호" autocomplete="off" />
-              <span class="password-eye" aria-hidden="true">◉</span>
+              <button type="button" class="password-eye" aria-label="비밀번호 보기" tabindex="0" onclick="
+                const pwInput = this.parentElement.querySelector('input');
+                if (pwInput.type==='password') {
+                  pwInput.type='text';
+                  this.querySelector('svg use').setAttribute('href', '#eye-open');
+                } else {
+                  pwInput.type='password';
+                  this.querySelector('svg use').setAttribute('href', '#eye-closed');
+                }
+              ">
+                <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                  <use href="#eye-closed"></use>
+                </svg>
+              </button>
+              <svg style="display:none;">
+                <symbol id="eye-closed" viewBox="0 0 20 20">
+                  <ellipse cx="10" cy="10" rx="8" ry="5" fill="none" stroke="#888" stroke-width="1.5"/>
+                  <line x1="4" y1="16" x2="16" y2="4" stroke="#888" stroke-width="1.5"/>
+                  <circle cx="10" cy="10" r="2.5" fill="none" stroke="#888" stroke-width="1.5"/>
+                </symbol>
+                <symbol id="eye-open" viewBox="0 0 20 20">
+                  <ellipse cx="10" cy="10" rx="8" ry="5" fill="none" stroke="#888" stroke-width="1.5"/>
+                  <circle cx="10" cy="10" r="2.5" fill="none" stroke="#888" stroke-width="1.5"/>
+                </symbol>
+              </svg>
             </span>
           </div>
           <div class="login-actions">
@@ -34,6 +58,6 @@
 
       <footer class="copyright">Copy Right reserved by Tom Seo, 2026</footer>
     </main>
-    <script type="module" src="src/app.js"></script>
+    <script type="module" src="src/app.js?v=7"></script>
   </body>
 </html>

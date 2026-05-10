@@ -183,11 +183,7 @@ drop policy if exists trips_select_by_role on public.trips;
 create policy trips_select_by_role
 on public.trips for select
 to authenticated
-using (
-  public.is_admin()
-  or employee_id = public.current_employee_id()
-  or department_id = public.current_department_id()
-);
+using (true);
 
 drop policy if exists trips_insert_own on public.trips;
 create policy trips_insert_own
@@ -221,13 +217,25 @@ to authenticated
 with check (public.is_admin());
 
 insert into public.countries (name, sort_order) values
-  ('일본', 10),
+  ('국내', 5),
+  ('미국', 10),
   ('중국', 20),
-  ('베트남', 30),
-  ('미국', 40),
-  ('인도', 50),
-  ('독일', 60),
-  ('멕시코', 70),
+  ('캐나다', 30),
+  ('멕시코', 40),
+  ('브라질', 50),
+  ('인도', 60),
+  ('인도네시아', 70),
+  ('포르투갈', 80),
+  ('폴란드', 90),
+  ('슬로바키아', 100),
+  ('일본', 110),
+  ('프랑스', 120),
+  ('이탈리아', 130),
+  ('사우디아라비아', 140),
+  ('영국', 150),
+  ('독일', 160),
+  ('러시아', 170),
+  ('베트남', 180),
   ('기타', 999)
 on conflict (name) do update set
   sort_order = excluded.sort_order,

@@ -11,10 +11,20 @@ const STORAGE_KEYS = {
   anonKey: "youngil.supabase.anonKey",
 };
 
-export function loadRuntimeConfig() {
+let localConfigPromise = null;
+
+async function loadLocalConfig() {
+  if (!localConfigPromise) {
+    localConfigPromise = import("./config.local.js").catch(() => ({}));
+  }
+  return localConfigPromise;
+}
+
+export async function loadRuntimeConfig() {
+  const localConfig = await loadLocalConfig();
   return {
-    url: localStorage.getItem(STORAGE_KEYS.url) || DEFAULT_SUPABASE_URL,
-    anonKey: localStorage.getItem(STORAGE_KEYS.anonKey) || DEFAULT_SUPABASE_ANON_KEY,
+    url: localStorage.getItem(STORAGE_KEYS.url) || localConfig.SUPABASE_URL || DEFAULT_SUPABASE_URL,
+    anonKey: localStorage.getItem(STORAGE_KEYS.anonKey) || localConfig.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY,
   };
 }
 
@@ -29,7 +39,7 @@ export function clearRuntimeConfig() {
 }
 
 /** localStorage 또는 위 기본값 중 URL·anon key가 모두 있으면 true */
-export function hasEffectiveSupabaseConfig(config = loadRuntimeConfig()) {
+export function hasEffectiveSupabaseConfig(config) {
   return Boolean(String(config.url || "").trim() && String(config.anonKey || "").trim());
 }
 

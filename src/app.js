@@ -1,6 +1,6 @@
 import { normalizeEmployeeLoginId, resolveAuthEmailFromEmployeeId } from "./config.js";
 import { getSupabaseClient } from "./supabase.js";
-import { ensureEmployeeAuthUser, loadSignedInProfile, signInAsAdmin, signInSelectedEmployee, signOut } from "./auth.js";
+import { changePassword, ensureEmployeeAuthUser, loadSignedInProfile, signInAsAdmin, signInSelectedEmployee, signOut } from "./auth.js";
 import {
   createCompany,
   createDepartment,
@@ -16,6 +16,8 @@ import {
   fetchDepartments,
   fetchEmployees,
   fetchTrips,
+  fallbackCountries,
+  markPasswordChanged,
   updateTrip,
   updateCompany,
   updateDepartment,
@@ -41,6 +43,7 @@ const state = {
   trips: [],
   filter: "all",
   departmentFilter: "",
+  myTripsOnly: false,
   page: 1,
   employeePage: 1,
   selectedEmployeeId: null,
@@ -67,6 +70,7 @@ async function boot() {
 
   renderCurrentUser();
   setupLogout();
+  setupPasswordChange();
 
   if (document.querySelector("#employeeTripForm")) await setupEmployeeTripPage();
   if (document.querySelector("#adminTripForm")) await setupAdminTripPage();
@@ -109,10 +113,12 @@ async function setupEmployeeTripPage() {
   await loadReferenceData();
   await loadTrips();
   populateTripCountrySelect("#tripCountry", state.countries.map((item) => item.name), "국가선택");
-  populateSelect("#tripCompany", state.companies.map((item) => item.name), "업체명 선택");
+  populateSelect("#tripCompanyReference", state.companies.map((item) => item.name), "업체명 선택");
   populateDepartmentFilter();
   setupTripTabs();
   setupDepartmentFilter();
+  setupMyTripsOnlyButton();
+  setupCompanyReference("#tripCompanyReference", "#tripCompany");
   setupEmployeeTripForm();
   setupTripUpload();
   setupTripDownload();
@@ -128,8 +134,9 @@ async function setupAdminTripPage() {
   populateDepartmentSelect("#adminTripDepartment");
   populateEmployeeSelect();
   populateTripCountrySelect("#adminTripCountry", state.countries.map((item) => item.name), "국가선택");
-  populateSelect("#adminTripCompany", state.companies.map((item) => item.name), "업체명 선택");
+  populateSelect("#adminTripCompanyReference", state.companies.map((item) => item.name), "업체명 선택");
   setupAdminTripSelectors();
+  setupCompanyReference("#adminTripCompanyReference", "#adminTripCompany");
   setupTripTabs();
   setupAdminTripForm();
   setupTripUpload();
@@ -186,7 +193,7 @@ function renderCurrentUser() {
   if (!target) return;
   const dept = state.profile.departments?.name || "부서 미지정";
   const position = state.profile.position || (state.profile.role === "admin" ? "관리자" : "직급 미지정");
-  target.innerHTML = `현재접속자: <strong>${escapeHtml(state.profile.name)}</strong> (${escapeHtml(position)}, ${escapeHtml(dept)})`;
+  target.innerHTML = `현재접속자: <strong>${escapeHtml(state.profile.name)}</strong> (${escapeHtml(position)}, ${escapeHtml(dept)})<br /><button class="password-change-link" data-password-change type="button">[비밀번호 변경]</button>`;
 }
 
 function requireAdmin() {
@@ -196,23 +203,128 @@ function requireAdmin() {
   }
 }
 
+function setupPasswordChange() {
+  const button = document.querySelector("[data-password-change]");
+  if (!button) return;
+  const modal = ensurePasswordChangeModal();
+  const form = modal.querySelector("#passwordChangeForm");
+  button.addEventListener("click", () => {
+    form.reset();
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+    modal.querySelector("#currentPasswordInput")?.focus();
+  });
+}
+
+function ensurePasswordChangeModal() {
+  let modal = document.querySelector("#passwordChangeModal");
+  if (modal) return modal;
+  modal = document.createElement("div");
+  modal.id = "passwordChangeModal";
+  modal.className = "modal-backdrop";
+  modal.setAttribute("aria-hidden", "true");
+  modal.innerHTML = `
+    <section class="password-modal" role="dialog" aria-modal="true" aria-labelledby="passwordChangeTitle">
+      <h2 id="passwordChangeTitle">비밀번호 변경</h2>
+      <form id="passwordChangeForm">
+        <label>현재 비밀번호:<input id="currentPasswordInput" type="password" autocomplete="current-password" /></label>
+        <label>새로운 비밀번호:<input id="newPasswordInput" type="password" autocomplete="new-password" /></label>
+        <p class="password-rule">새로운 비밀번호는 최소 6자리 이상이어야 합니다.</p>
+        <div class="modal-actions">
+          <button class="primary-button" type="submit">확인</button>
+          <button class="muted-button" type="button" data-password-cancel>취소</button>
+        </div>
+      </form>
+    </section>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector("[data-password-cancel]").addEventListener("click", closePasswordChangeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closePasswordChangeModal();
+  });
+  modal.querySelector("#passwordChangeForm").addEventListener("submit", submitPasswordChange);
+  return modal;
+}
+
+function closePasswordChangeModal() {
+  const modal = document.querySelector("#passwordChangeModal");
+  if (!modal) return;
+  modal.classList.remove("show");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+async function submitPasswordChange(event) {
+  event.preventDefault();
+  const currentPassword = value("#currentPasswordInput");
+  const newPassword = value("#newPasswordInput");
+  if (!currentPassword || !newPassword) {
+    showToast("현재 비밀번호와 새로운 비밀번호를 입력해주세요.");
+    return;
+  }
+  if (newPassword.length < 6) {
+    showToast("새로운 비밀번호는 최소 6자리 이상이어야 합니다.");
+    return;
+  }
+  const email = state.profile?.login_email || (await getCurrentSessionEmail());
+  if (!email) {
+    showToast("현재 계정 이메일을 확인할 수 없습니다.");
+    return;
+  }
+  try {
+    await verifyCurrentPassword(email, currentPassword);
+    await changePassword(state.client, newPassword);
+    try {
+      await markPasswordChanged(state.client);
+    } catch (error) {
+      console.warn("must_change_password update skipped", error);
+    }
+    closePasswordChangeModal();
+    showToast("비밀번호가 변경되었습니다.");
+  } catch (error) {
+    showError(error);
+  }
+}
+
+async function verifyCurrentPassword(email, password) {
+  const { error } = await state.client.auth.signInWithPassword({ email, password });
+  if (error?.message === "Invalid login credentials") {
+    throw new Error("현재 비밀번호가 맞지 않습니다.");
+  }
+  if (error) throw error;
+}
+
+async function getCurrentSessionEmail() {
+  const { data, error } = await state.client.auth.getSession();
+  if (error) throw error;
+  return data.session?.user?.email || "";
+}
+
 function setupEmployeeTripForm() {
   document.querySelector("#employeeTripForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
+    const saveAction = event.submitter?.dataset.tripSaveAction || "update";
     try {
       const payload = readTripPayload();
       const selectedTrip = getSelectedTrip();
-      const employeeId = selectedTrip?.employee_id || state.profile.id;
-      if (hasOverlappingTrip(employeeId, payload.startDate, payload.endDate, selectedTrip?.id)) {
-        throw new Error("같은 직원의 출장기간이 이미 등록된 출장과 겹칩니다.");
+      const shouldUpdate = saveAction === "update";
+      if (shouldUpdate && !selectedTrip) {
+        throw new Error("수정할 출장 행을 먼저 선택해주세요.");
       }
-      if (selectedTrip) {
+      if (shouldUpdate) {
         if (selectedTrip.employee_id !== state.profile.id) {
           throw new Error("본인이 등록한 출장만 수정할 수 있습니다.");
         }
+        const conflictTrip = findOverlappingTrip(selectedTrip.employee_id, payload.startDate, payload.endDate, selectedTrip.id);
+        if (conflictTrip) {
+          throw new Error(formatOverlapMessage(conflictTrip));
+        }
         await updateTrip(state.client, selectedTrip.id, payload);
       } else {
+        const conflictTrip = findOverlappingTrip(state.profile.id, payload.startDate, payload.endDate);
+        if (conflictTrip) {
+          throw new Error(formatOverlapMessage(conflictTrip));
+        }
         await createTrip(state.client, state.profile, payload);
       }
       form.reset();
@@ -265,6 +377,7 @@ function setupAdminTripForm() {
   document.querySelector("#adminTripForm").addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
+    const saveAction = event.submitter?.dataset.tripSaveAction || "update";
     const employee = getSelectedAdminTripEmployee();
     if (!employee) {
       showToast("직원을 선택해주세요.");
@@ -273,10 +386,16 @@ function setupAdminTripForm() {
     try {
       const payload = readTripPayload("adminTrip");
       const selectedTrip = getSelectedTrip();
-      if (hasOverlappingTrip(employee.id, payload.startDate, payload.endDate, selectedTrip?.id)) {
-        throw new Error("같은 직원의 출장기간이 이미 등록된 출장과 겹칩니다.");
+      const shouldUpdate = saveAction === "update";
+      const excludeTripId = shouldUpdate ? selectedTrip?.id : null;
+      if (shouldUpdate && !selectedTrip) {
+        throw new Error("수정할 출장 행을 먼저 선택해주세요.");
       }
-      if (selectedTrip) {
+      const conflictTrip = findOverlappingTrip(employee.id, payload.startDate, payload.endDate, excludeTripId);
+      if (conflictTrip) {
+        throw new Error(formatOverlapMessage(conflictTrip));
+      }
+      if (shouldUpdate) {
         await updateTrip(state.client, selectedTrip.id, {
           ...payload,
           employeeId: employee.id,
@@ -402,7 +521,7 @@ function readTripPayload(prefix = "trip") {
   const startDate = value(`#${prefix}StartDate`);
   const endDate = value(`#${prefix}EndDate`);
   const country = value(`#${prefix}Country`);
-  const companyName = value(`#${prefix}Company`);
+  const companyName = normalizeAndValidateTripCompanyName(document.querySelector(`#${prefix}Company`)?.value ?? "");
   if (!startDate || !endDate || !country || !companyName) {
     throw new Error("출장 시작일, 종료일, 국가, 방문업체명을 입력해주세요.");
   }
@@ -414,6 +533,30 @@ function readTripPayload(prefix = "trip") {
     city: value(`#${prefix}City`),
     note: value(`#${prefix}Note`),
   };
+}
+
+/** 출장 등록: 자유 입력 + 품질 검증(공백·탭·제어문자·의미 없는 문자열 차단). DB companies 테이블과 무관. */
+function normalizeAndValidateTripCompanyName(raw) {
+  if (raw == null) throw new Error("방문업체명을 입력해주세요.");
+  const str = String(raw);
+  if (/\t/.test(str)) {
+    throw new Error("방문업체명에 탭 문자는 사용할 수 없습니다.");
+  }
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(str)) {
+    throw new Error("방문업체명에 사용할 수 없는 제어 문자가 포함되어 있습니다.");
+  }
+  let normalized = str.replace(/\u00a0/g, " ").trim();
+  if (!normalized) {
+    throw new Error("방문업체명을 입력해주세요. 공백만으로는 등록할 수 없습니다.");
+  }
+  normalized = normalized.replace(/[\u3000]{1,}/g, " ").replace(/ {2,}/g, " ");
+  if (!/[\p{L}\p{N}]/u.test(normalized)) {
+    throw new Error("방문업체명은 한글·영문 등 글자 또는 숫자를 한 글자 이상 포함해야 합니다.");
+  }
+  if (normalized.length > 200) {
+    throw new Error("방문업체명은 200자 이내로 입력해주세요.");
+  }
+  return normalized;
 }
 
 function setupAdminTripSelectors() {
@@ -477,6 +620,29 @@ function setupDepartmentFilter() {
   });
 }
 
+function setupCompanyReference(referenceSelector, targetSelector) {
+  const reference = document.querySelector(referenceSelector);
+  const target = document.querySelector(targetSelector);
+  if (!reference || !target) return;
+  reference.addEventListener("change", () => {
+    if (reference.value) target.value = reference.value;
+  });
+}
+
+function setupMyTripsOnlyButton() {
+  const button = document.querySelector("#myTripsOnlyButton");
+  if (!button) return;
+  button.addEventListener("click", () => {
+    state.myTripsOnly = !state.myTripsOnly;
+    state.page = 1;
+    clearSelectedTrip();
+    button.classList.toggle("active", state.myTripsOnly);
+    button.setAttribute("aria-pressed", String(state.myTripsOnly));
+    button.textContent = state.myTripsOnly ? "전체 출장 보기" : "본인 출장만 보기";
+    renderTripTable();
+  });
+}
+
 function populateDepartmentFilter() {
   const select = document.querySelector("#tripDepartmentFilter");
   if (!select) return;
@@ -489,7 +655,7 @@ function populateDepartmentFilter() {
 function renderTripTable() {
   const tbody = document.querySelector("[data-trip-table]");
   if (!tbody) return;
-  const rows = filteredTrips();
+  const rows = sortTripsByNearestStart(filteredTrips());
   const pageRows = paginate(rows, state.page);
   renderTripStats();
   if (!pageRows.length) {
@@ -524,6 +690,7 @@ function filteredTrips() {
     const employee = state.employees.find((item) => item.id === trip.employee_id);
     if (!isTripAssignableEmployee(employee)) return false;
     if (trip.status !== "active") return false;
+    if (state.myTripsOnly && trip.employee_id !== state.profile?.id) return false;
     if (state.filter === "current") {
       if (!isCurrentTrip(trip)) return false;
     } else if (state.filter === "upcoming") {
@@ -536,6 +703,16 @@ function filteredTrips() {
     if (state.filter === "domestic") return isDomestic;
     if (state.filter === "overseas") return !isDomestic;
     return true;
+  });
+}
+
+function sortTripsByNearestStart(trips) {
+  return [...trips].sort((a, b) => {
+    const startCompare = String(a.start_date || "").localeCompare(String(b.start_date || ""));
+    if (startCompare) return startCompare;
+    const endCompare = String(a.end_date || "").localeCompare(String(b.end_date || ""));
+    if (endCompare) return endCompare;
+    return String(a.created_at || "").localeCompare(String(b.created_at || ""));
   });
 }
 
@@ -584,7 +761,9 @@ function selectTripForForm(tripId) {
   document.querySelector("#tripStartDate").value = trip.start_date || "";
   document.querySelector("#tripEndDate").value = trip.end_date || "";
   setSelectValue("#tripCountry", trip.country);
-  setSelectValue("#tripCompany", trip.company_name);
+  const companyInput = document.querySelector("#tripCompany");
+  if (companyInput) companyInput.value = trip.company_name || "";
+  setSelectValue("#tripCompanyReference", trip.company_name);
   const cityInput = document.querySelector("#tripCity");
   if (cityInput) cityInput.value = trip.city || "";
   document.querySelector("#tripNote").value = trip.note || "";
@@ -603,7 +782,9 @@ function selectTripForAdminForm(trip) {
   document.querySelector("#adminTripStartDate").value = trip.start_date || "";
   document.querySelector("#adminTripEndDate").value = trip.end_date || "";
   setSelectValue("#adminTripCountry", trip.country);
-  setSelectValue("#adminTripCompany", trip.company_name);
+  const companyInput = document.querySelector("#adminTripCompany");
+  if (companyInput) companyInput.value = trip.company_name || "";
+  setSelectValue("#adminTripCompanyReference", trip.company_name);
   const cityInput = document.querySelector("#adminTripCity");
   if (cityInput) cityInput.value = trip.city || "";
   document.querySelector("#adminTripNote").value = trip.note || "";
@@ -644,12 +825,24 @@ function setSelectValue(selector, nextValue) {
 }
 
 function hasOverlappingTrip(employeeId, startDate, endDate, excludeTripId = null) {
-  return state.trips.some((trip) => {
-    if (trip.id === excludeTripId) return false;
-    if (trip.employee_id !== employeeId) return false;
+  return Boolean(findOverlappingTrip(employeeId, startDate, endDate, excludeTripId));
+}
+
+function findOverlappingTrip(employeeId, startDate, endDate, excludeTripId = null) {
+  const targetEmployeeId = String(employeeId || "");
+  const ignoredTripId = excludeTripId == null ? null : String(excludeTripId);
+  return state.trips.find((trip) => {
+    if (ignoredTripId && String(trip.id) === ignoredTripId) return false;
+    if (String(trip.employee_id || "") !== targetEmployeeId) return false;
     if (trip.status !== "active") return false;
     return dateRangesOverlap(startDate, endDate, trip.start_date, trip.end_date);
-  });
+  }) || null;
+}
+
+function formatOverlapMessage(trip) {
+  const country = trip.country || "-";
+  const company = trip.company_name || "-";
+  return `같은 직원의 출장기간이 이미 등록된 출장과 겹칩니다. 겹치는 출장: ${formatTripPeriod(trip)} / ${country} / ${company}`;
 }
 
 function dateRangesOverlap(startA, endA, startB, endB) {
@@ -1206,15 +1399,17 @@ function populateSelect(selector, values, placeholder) {
 function populateTripCountrySelect(selector, values, placeholder) {
   const select = document.querySelector(selector);
   if (!select) return;
-  const uniqueValues = Array.from(new Set(values.filter(Boolean)));
+  const defaultValues = fallbackCountries().map((item) => item.name);
+  const uniqueValues = Array.from(new Set([...defaultValues, ...values].filter(Boolean)));
   const otherCountries = uniqueValues
-    .filter((item) => item !== "국내")
+    .filter((item) => item !== "국내" && item !== "기타")
     .sort((a, b) => a.localeCompare(b, "ko"));
   select.innerHTML = [
     `<option value="">${escapeHtml(placeholder)}</option>`,
     `<option value="국내">국내</option>`,
     `<option value="" disabled>────────</option>`,
     ...otherCountries.map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`),
+    `<option value="기타">기타</option>`,
   ].join("");
 }
 

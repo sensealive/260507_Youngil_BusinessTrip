@@ -279,19 +279,11 @@ export async function deactivateCompany(client, companyId) {
 }
 
 export async function fetchTrips(client, profile) {
-  let query = client
+  const { data, error } = await client
     .from("trips")
     .select("id,employee_id,department_id,start_date,end_date,country,company_name,city,note,status,created_at,updated_at")
     .neq("status", "deleted")
     .order("start_date", { ascending: false });
-
-  if (profile.role === "department_manager") {
-    query = query.eq("department_id", profile.department_id);
-  } else if (profile.role !== "admin") {
-    query = query.or(`employee_id.eq.${profile.id},department_id.eq.${profile.department_id}`);
-  }
-
-  const { data, error } = await query;
   throwIfError(error);
   return data || [];
 }
@@ -360,7 +352,28 @@ export async function markPasswordChanged(client) {
 }
 
 export function fallbackCountries() {
-  return ["일본", "중국", "베트남", "미국", "인도", "독일", "멕시코", "기타"].map((name, index) => ({
+  return [
+    "국내",
+    "미국",
+    "중국",
+    "캐나다",
+    "멕시코",
+    "브라질",
+    "인도",
+    "인도네시아",
+    "포르투갈",
+    "폴란드",
+    "슬로바키아",
+    "일본",
+    "프랑스",
+    "이탈리아",
+    "사우디아라비아",
+    "영국",
+    "독일",
+    "러시아",
+    "베트남",
+    "기타",
+  ].map((name, index) => ({
     id: `fallback-${index}`,
     name,
     sort_order: index + 1,

@@ -12,7 +12,7 @@ async function loadSupabaseModule() {
 }
 
 async function createConfiguredClient({ persistSession }) {
-  const config = loadRuntimeConfig();
+  const config = await loadRuntimeConfig();
   if (!hasEffectiveSupabaseConfig(config)) {
     throw new Error("Supabase URL과 anon key가 필요합니다.");
   }
@@ -27,7 +27,7 @@ async function createConfiguredClient({ persistSession }) {
 }
 
 export async function getSupabaseClient() {
-  const config = loadRuntimeConfig();
+  const config = await loadRuntimeConfig();
   if (!hasEffectiveSupabaseConfig(config)) {
     throw new Error("Supabase URL과 anon key가 필요합니다.");
   }

@@ -244,13 +244,22 @@ textarea {
   white-space: nowrap;
 }
 
+.password-change-link {
+  border: 0;
+  background: transparent;
+  color: #6f7480;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 6px 0 0;
+}
+
 .content-grid {
   display: grid;
   gap: 24px;
 }
 
 .employee-trip-layout {
-  grid-template-columns: 250px minmax(640px, 1fr);
+  grid-template-columns: 255px minmax(640px, 1fr);
 }
 
 .admin-trip-layout {
@@ -315,6 +324,18 @@ textarea {
   margin-top: 2px;
 }
 
+#employeeTripForm .button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+#employeeTripForm .button-row button {
+  min-width: 0;
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
 .excel-upload-button {
   justify-self: start;
 }
@@ -338,6 +359,23 @@ textarea {
   color: var(--red);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.notice.notice--nudge-right {
+  left: -8px;
+  padding-left: 12px;
+}
+
+.field-label-text {
+  display: inline-flex;
+  gap: 3px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+
+.field-required {
+  color: var(--red);
+  font-weight: 800;
 }
 
 .filter-tabs {
@@ -418,6 +456,14 @@ textarea {
   padding: 7px 12px;
   font-size: 12px;
   box-shadow: none;
+}
+
+#myTripsOnlyButton {
+  background: #12a85f;
+}
+
+#myTripsOnlyButton.active {
+  background: #0d8f51;
 }
 
 .table-wrap {
@@ -702,6 +748,54 @@ button:disabled {
   background: #f7f8fb;
   padding: 5px 10px;
   white-space: nowrap;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(21, 23, 29, 0.28);
+  padding: 24px;
+}
+
+.modal-backdrop.show {
+  display: flex;
+}
+
+.password-modal {
+  width: min(360px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.password-modal h2 {
+  margin: 0 0 16px;
+  font-size: 17px;
+}
+
+.password-modal form {
+  display: grid;
+  gap: 12px;
+}
+
+.password-rule {
+  margin: -2px 0 0;
+  color: #6f7480;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 @media (max-width: 1100px) {
