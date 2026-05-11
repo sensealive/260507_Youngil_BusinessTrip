@@ -13,22 +13,22 @@ Supabase Dashboard의 **Project Settings > API**에서 아래 값을 확인합�
 
 | 값 | 사용 위치 | 주의 |
 | --- | --- | --- |
-| Project URL | `src/config.local.js`의 `SUPABASE_URL` | 공개 가능 |
-| publishable/anon key | `src/config.local.js`의 `SUPABASE_ANON_KEY` | 공개 가능하나 RLS 필수 |
+| Project URL | `src/config.js`의 `DEFAULT_SUPABASE_URL` | 공개 가능 |
+| publishable/anon key | `src/config.js`의 `DEFAULT_SUPABASE_ANON_KEY` | 공개 가능하나 RLS 필수 |
 | service_role key | 브라우저 앱에서 사용 금지 | 저장소/브라우저/.env에 넣지 않음 |
 
 현재 앱은 정적 브라우저 앱이므로 publishable/anon key는 최종 사용자 브라우저에서 보일 수 있습니다. 보안은 Supabase RLS 정책으로 보호합니다.
 
-## 3. 로컬 설정 파일
+## 3. 클라이언트 설정 파일
 
-`src/config.local.example.js`를 복사해 `src/config.local.js`를 만듭니다.
+`src/config.js`에 실제 Supabase Project URL과 publishable/anon key를 입력합니다.
 
 ```js
-export const SUPABASE_URL = "https://your-project.supabase.co";
-export const SUPABASE_ANON_KEY = "your-publishable-or-anon-key";
+export const DEFAULT_SUPABASE_URL = "https://your-project.supabase.co";
+export const DEFAULT_SUPABASE_ANON_KEY = "your-publishable-or-anon-key";
 ```
 
-`src/config.local.js`는 `.gitignore` 대상입니다. GitHub에 올리지 않습니다.
+두 값은 브라우저 앱에서 공개될 수 있는 클라이언트 설정입니다. `service_role` 키와 혼동하지 않습니다.
 
 ## 4. 마이그레이션 적용
 
@@ -96,4 +96,4 @@ Supabase SQL Editor에서 아래 순서대로 실행합니다.
 
 - 비밀번호 평문은 저장하지 않습니다.
 - `service_role` 키는 절대 클라이언트에 넣지 않습니다.
-- 공개 저장소에는 실제 Supabase URL/key도 직접 넣지 않고 `src/config.local.js`로 분리합니다.
+- Supabase URL과 anon/public key는 클라이언트에 공개될 수 있습니다. `service_role` 키는 절대 클라이언트에 넣지 않습니다.

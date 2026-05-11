@@ -57,3 +57,5 @@
 - 현재 비밀번호 검증 후 새 비밀번호 저장 구현
 - 새 비밀번호 최소 6자리 검증 및 안내 문구 추가
 - `node --check src/app.js`로 주요 JS 문법 검증 수행
+- Supabase Project URL과 anon/public key를 숨김 로컬 파일 대신 `src/config.js` 공개 설정에서 읽도록 정리
+- `src/config.local.example.js` 삭제 및 관련 문서/배포 안내 갱신

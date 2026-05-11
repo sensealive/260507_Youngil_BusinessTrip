@@ -4,7 +4,7 @@
 
 - [x] 공통 로그인 화면 구현
 - [x] Supabase Auth 기반 관리자/직원 로그인 연결
-- [x] Supabase URL/key를 `src/config.local.js`에서 읽도록 정리
+- [x] Supabase URL/key를 `src/config.js` 공개 설정에서 읽도록 정리
 - [x] 구형 미사용 JS 파일 삭제
 - [x] 직원 출장 등록/수정/삭제 구현
 - [x] 관리자 출장 등록/수정/삭제 구현
@@ -37,11 +37,11 @@
 - [ ] 실제 Supabase SQL Editor에 `001`~`009`가 모두 적용됐는지 최종 확인
 - [ ] 실제 브라우저에서 직원/관리자 계정으로 비밀번호 변경 성공 여부 확인
 - [ ] 실제 브라우저에서 출장 엑셀업로드 성공/skip/오류 케이스 확인
-- [ ] GitHub Pages 배포 후 `src/config.local.js`를 배포 환경에서 어떻게 제공할지 운영 방식 확정
+- [x] GitHub Pages 배포 시 `src/config.js` 공개 설정을 사용하는 방식으로 운영 확정
 - [ ] ShortCut `.url` 실제 배포 주소 반영
 
 ## 주의
 
-- `src/config.local.js`는 `.gitignore` 대상입니다.
+- Supabase URL과 anon/public key는 `src/config.js`에 입력합니다.
 - `service_role` 키는 절대 브라우저 코드에 넣지 않습니다.
 - 출장 테이블 관련 수정은 `business-trip.html`과 `admin-business-trip.html` 양쪽 동작을 같이 확인합니다.

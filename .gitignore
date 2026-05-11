@@ -8,11 +8,10 @@ Thumbs.db
 *.swp
 *.swo
 
-# Environment & secrets (로컬 값은 커밋하지 않음)
+# Environment & secrets
 .env
 .env.local
 .env.*.local
-src/config.local.js
 
 # Logs
 logs/

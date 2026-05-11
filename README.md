@@ -25,7 +25,6 @@ src/
   app.js
   auth.js
   config.js
-  config.local.example.js
   store.js
   styles.css
   supabase.js
@@ -36,7 +35,7 @@ docs/
   Supabase_setup.md
 ```
 
-`src/config.local.js`는 로컬 설정 파일이며 `.gitignore` 대상입니다. 저장소에는 `src/config.local.example.js`만 올립니다.
+Supabase Project URL과 anon/public key는 `src/config.js`에 입력합니다. 두 값은 브라우저 정적 앱에서 공개되는 클라이언트 설정이며, 보안은 Supabase RLS 정책으로 보호합니다.
 
 ## Supabase 설정
 
@@ -44,11 +43,11 @@ docs/
 2. `supabase/migrations/001_initial_schema.sql`부터 `009_restore_employee_login_lookup_policy.sql`까지 순서대로 SQL Editor에서 실행합니다.
 3. 관리자 Auth 계정을 생성합니다.
 4. `supabase/seed/default_admin.sql`로 관리자 직원 행을 연결합니다.
-5. `src/config.local.example.js`를 복사해 `src/config.local.js`를 만들고 실제 Project URL과 publishable/anon key를 입력합니다.
+5. `src/config.js`에 실제 Project URL과 publishable/anon key를 입력합니다.
 
 ```js
-export const SUPABASE_URL = "https://your-project.supabase.co";
-export const SUPABASE_ANON_KEY = "your-publishable-or-anon-key";
+export const DEFAULT_SUPABASE_URL = "https://your-project.supabase.co";
+export const DEFAULT_SUPABASE_ANON_KEY = "your-publishable-or-anon-key";
 ```
 
 `service_role` 키는 절대 브라우저 코드나 저장소에 넣지 않습니다.
@@ -74,7 +73,7 @@ git branch -M master
 git push -u origin master
 ```
 
-배포 환경에서도 Supabase URL/key 제공 방식을 별도로 정해야 합니다. 현재 로컬 개발 기준은 `.gitignore`된 `src/config.local.js`입니다.
+GitHub Pages 배포 시에도 `src/config.js`에 입력된 Supabase URL/key가 사용됩니다.
 
 ## 문서
 

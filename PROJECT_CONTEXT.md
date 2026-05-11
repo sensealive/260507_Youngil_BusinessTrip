@@ -14,8 +14,7 @@ GitHub Pages 같은 정적 호스팅에서 동작하며, 데이터와 인증은 
 - `src/app.js`: 모든 페이지의 화면 로직
 - `src/store.js`: Supabase 테이블 CRUD 및 다운로드/업로드용 데이터 처리
 - `src/auth.js`: Supabase Auth 로그인, 로그아웃, 비밀번호 변경
-- `src/config.js`: 공개 저장소용 기본 설정. 실제 Supabase 값은 넣지 않음
-- `src/config.local.js`: 로컬 Supabase URL/key 설정 파일. `.gitignore` 대상
+- `src/config.js`: Supabase 프로젝트 URL과 anon/public key, Auth 기본 설정
 - `src/styles.css`: 공통 스타일
 - `supabase/migrations/*.sql`: Supabase 스키마/RLS 변경
 
@@ -26,8 +25,7 @@ GitHub Pages 같은 정적 호스팅에서 동작하며, 데이터와 인증은 
 - 로그인은 ID + 비밀번호 방식입니다.
 - 관리자 ID는 `admin`이며 내부 Auth 이메일은 `admin@project.local`입니다.
 - 일반 직원은 `login_id`를 사용하며 내부 Auth 이메일은 `직원ID@project.local` 형식입니다.
-- Supabase Project URL과 publishable/anon key는 `src/config.local.js`에서 읽습니다.
-- `src/config.local.js`는 GitHub에 올리지 않습니다.
+- Supabase Project URL과 publishable/anon key는 `src/config.js`의 기본값에서 읽습니다.
 - 브라우저 정적 앱 특성상 publishable/anon key는 최종 사용자에게 보일 수 있습니다. 보안은 RLS 정책으로 보호합니다.
 
 ## 출장 화면 정책
@@ -79,7 +77,7 @@ GitHub Pages 같은 정적 호스팅에서 동작하며, 데이터와 인증은 
 
 ## 운영 주의
 
-- `service_role` 키는 저장소, 브라우저 코드, `.env`, `config.local.js` 어디에도 넣지 않습니다.
+- `service_role` 키는 저장소, 브라우저 코드, `.env` 어디에도 넣지 않습니다.
 - 실제 Supabase에는 `001`부터 `009`까지 마이그레이션이 순서대로 적용되어야 합니다.
 - `007`, `008`, `009`는 직원 화면 전체 출장 조회와 로그인 ID 조회 정책에 중요합니다.
 - `business-trip.html`과 `admin-business-trip.html`은 출장 테이블 로직을 공유하므로 한쪽 변경 시 다른 쪽 영향도 확인합니다.
