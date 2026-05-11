@@ -1,6 +1,6 @@
 /** Supabase 프로젝트 URL과 anon/public key는 브라우저에 공개되는 클라이언트 설정입니다. */
-export const DEFAULT_SUPABASE_URL = "";
-export const DEFAULT_SUPABASE_ANON_KEY = "";
+export const DEFAULT_SUPABASE_URL = "https://wutvertxvcgpsjiptgrb.supabase.co";
+export const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_Whu8YgXmf4Z6nfOr9ClHqA_KJaLRsJS";
 
 /** Supabase Auth에 등록하는 이메일과 동일해야 합니다. 화면에서는 아이디만 `admin`으로 입력합니다. */
 export const DEFAULT_ADMIN_AUTH_EMAIL = "admin@project.local";
