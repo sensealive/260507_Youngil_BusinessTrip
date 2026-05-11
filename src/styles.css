@@ -64,6 +64,10 @@ a {
   font-weight: 500;
 }
 
+.login-page .brand-block h1 {
+  font-size: 18px;
+}
+
 .brand-block.compact .brand-title {
   font-size: 20px;
 }
@@ -835,6 +839,11 @@ button:disabled {
     padding: 8px;
   }
 
+  .app-page {
+    overflow-x: hidden;
+    padding: 0;
+  }
+
   .wire-frame,
   .login-frame {
     width: 100%;
@@ -842,10 +851,96 @@ button:disabled {
     padding: 18px;
   }
 
+  .app-page .wire-frame {
+    width: 100vw;
+    max-width: 100vw;
+    min-height: 100vh;
+    padding: 8px;
+  }
+
+  .trip-page,
+  .manage-page {
+    padding-inline: 8px;
+  }
+
+  .content-grid,
+  .manage-grid {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .employee-trip-layout,
+  .admin-trip-layout,
+  .manage-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side-form,
+  .list-panel,
+  .manage-block {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .content-grid > *,
+  .manage-grid > * {
+    min-width: 0;
+  }
+
+  #employeeTripForm {
+    padding: 16px;
+  }
+
+  #employeeTripForm h2 {
+    font-size: 22px;
+  }
+
+  #employeeTripForm label,
+  #employeeTripForm input,
+  #employeeTripForm select,
+  #employeeTripForm textarea,
+  #employeeTripForm button {
+    font-size: 18px;
+    max-width: 100%;
+  }
+
+  #employeeTripForm input,
+  #employeeTripForm select,
+  #employeeTripForm textarea {
+    min-height: 49px;
+  }
+
+  #employeeTripForm .button-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #employeeTripForm .button-row button {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
   .login-card {
     position: static;
+    width: min(100%, 520px);
+    margin: 72px auto 0;
+    padding: 28px;
+    transform: none;
+  }
+
+  .login-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .login-actions {
+    justify-content: stretch;
+  }
+
+  .login-button {
     width: 100%;
-    padding-top: 100px;
   }
 
   .admin-login-link {
@@ -856,7 +951,8 @@ button:disabled {
 
   .copyright {
     position: static;
-    margin-top: 50px;
+    margin-top: 32px;
+    padding-bottom: 24px;
   }
 
   .admin-form-grid {
@@ -867,6 +963,11 @@ button:disabled {
     flex-wrap: wrap;
   }
 
+  .department-filter {
+    width: 115px;
+    padding: 8px 22px 8px 8px;
+  }
+
   .trip-table-toolbar {
     align-items: flex-start;
     flex-direction: column;
@@ -874,12 +975,87 @@ button:disabled {
 
   .trip-table-actions {
     margin-left: 0;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .list-panel {
+    padding: 14px;
+    overflow: hidden;
+  }
+
+  .table-wrap,
+  .trip-table-wrap {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .manage-block {
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .manage-block + .manage-block {
+    padding-left: 14px;
+  }
+
+  .department-manage label,
+  .department-manage input,
+  .department-manage button,
+  .employee-editor label,
+  .employee-editor input,
+  .employee-editor select,
+  .employee-editor button,
+  .company-manage input,
+  .company-manage button {
+    width: 100%;
+  }
+
+  .department-manage .add-button,
+  .save-employee-button {
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .company-add {
+    grid-template-columns: 1fr;
+  }
+
+  .manage-item,
+  .company-list .manage-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .manage-item button {
+    width: 100%;
   }
 
   .filter-tab,
   .filter-tab.active {
-    width: 90px;
+    width: 85px;
     height: 54px;
     font-size: 14px;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .login-frame {
+    display: grid;
+    align-content: start;
+    gap: 24px;
+    min-height: auto;
+  }
+
+  .login-card {
+    position: static;
+    width: min(100%, 520px);
+    margin: 0 auto;
+    transform: none;
+  }
+
+  .copyright {
+    position: static;
+    margin-top: 0;
+    padding-bottom: 24px;
   }
 }
