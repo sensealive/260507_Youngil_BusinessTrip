@@ -17,6 +17,8 @@ import {
   fetchEmployees,
   fetchTrips,
   fallbackCountries,
+  hardDeleteEmployee,
+  hasEmployeeTrips,
   markPasswordChanged,
   updateTrip,
   updateCompany,
@@ -991,7 +993,7 @@ async function saveEmployee() {
     if (state.selectedEmployeeId) {
       const previous = state.employees.find((employee) => employee.id === state.selectedEmployeeId);
       const loginEmail = resolveAuthEmailFromEmployeeId(loginId);
-      const authUserId = password ? await ensureEmployeeAuthUser(loginEmail, password) : previous.auth_user_id;
+      const authUserId = password ? await ensureEmployeeAuthUser(state.client, loginEmail, password) : previous.auth_user_id;
       await updateEmployee(state.client, state.selectedEmployeeId, {
         departmentId,
         position,
@@ -1006,7 +1008,7 @@ async function saveEmployee() {
     } else {
       if (!password || password.length < 6) return showToast("초기 비밀번호는 6자리 이상 입력해주세요.");
       const loginEmail = resolveAuthEmailFromEmployeeId(loginId);
-      const authUserId = await ensureEmployeeAuthUser(loginEmail, password);
+      const authUserId = await ensureEmployeeAuthUser(state.client, loginEmail, password);
       const existingEmployee = state.employees.find((employee) => normalizeEmployeeLoginId(employee.login_id) === loginId);
       const payload = {
         departmentId,
@@ -1037,12 +1039,21 @@ async function saveEmployee() {
 }
 
 async function deleteEmployee(employeeId) {
-  if (!confirm("이 직원을 삭제 처리할까요?")) return;
+  if (!confirm("이 직원을 삭제할까요? 출장 이력이 있으면 기록 보존을 위해 비활성 처리됩니다.")) return;
   try {
-    await deactivateEmployee(state.client, employeeId);
+    const hasTrips = await hasEmployeeTrips(state.client, employeeId);
+    if (hasTrips) {
+      await deactivateEmployee(state.client, employeeId);
+    } else {
+      await hardDeleteEmployee(state.client, employeeId);
+    }
     clearEmployeeEditor();
     await refreshManageData();
-    showToast("직원이 삭제 처리되었습니다.");
+    showToast(
+      hasTrips
+        ? "출장 이력이 있는 직원입니다. 기존 출장 기록 보존을 위해 직원 정보는 삭제하지 않고 비활성 처리했습니다."
+        : "직원 정보가 완전히 삭제되었습니다.",
+    );
   } catch (error) {
     showError(error);
   }
@@ -1083,7 +1094,7 @@ async function uploadEmployeesXlsx(event) {
         }
 
         const loginEmail = resolveAuthEmailFromEmployeeId(row.loginId);
-        const authUserId = await ensureEmployeeAuthUser(loginEmail, row.password);
+        const authUserId = await ensureEmployeeAuthUser(state.client, loginEmail, row.password);
         const payload = {
           departmentId: department.id,
           position: row.position,
@@ -1283,7 +1294,7 @@ function toDateInputValue(date) {
 async function downloadEmployeesXlsx() {
   const XLSX = await loadXlsx();
   const rows = [EMPLOYEE_SHEET_HEADERS];
-  state.employees.forEach((employee) => {
+  state.employees.filter((employee) => employee.is_active).forEach((employee) => {
     const department = state.departments.find((item) => item.id === employee.department_id);
     rows.push([
       department?.name || "",

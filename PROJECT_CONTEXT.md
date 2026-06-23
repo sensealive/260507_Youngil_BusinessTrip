@@ -27,6 +27,8 @@ GitHub Pages 같은 정적 호스팅에서 동작하며, 데이터와 인증은 
 - 일반 직원은 `login_id`를 사용하며 내부 Auth 이메일은 `직원ID@project.local` 형식입니다.
 - Supabase Project URL과 publishable/anon key는 `src/config.js`의 기본값에서 읽습니다.
 - 브라우저 정적 앱 특성상 publishable/anon key는 최종 사용자에게 보일 수 있습니다. 보안은 RLS 정책으로 보호합니다.
+- `admin-manage.html`의 직원 저장/엑셀 업로드는 `admin-upsert-employee-auth` Edge Function을 통해 `직원ID@project.local` Auth 계정을 생성하거나 비밀번호를 재설정합니다.
+- `service_role` 키는 Edge Function Secret(`SUPABASE_SERVICE_ROLE_KEY`)에서만 사용하고, 브라우저 코드에는 넣지 않습니다.
 
 ## 출장 화면 정책
 

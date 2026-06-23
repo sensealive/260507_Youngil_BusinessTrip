@@ -58,7 +58,30 @@ export async function createEmployeeAuthUser(email, password) {
   return data.user.id;
 }
 
-export async function ensureEmployeeAuthUser(email, password) {
+async function describeFunctionError(error) {
+  try {
+    const body = await error.context?.json();
+    return body?.error || body?.message || error.message;
+  } catch {
+    return error?.message || "알 수 없는 오류";
+  }
+}
+
+async function ensureEmployeeAuthUserWithAdminFunction(client, email, password) {
+  const { data, error } = await client.functions.invoke("admin-upsert-employee-auth", {
+    body: { email, password },
+  });
+  if (error) {
+    const message = await describeFunctionError(error);
+    throw new Error(`Auth 계정 자동 생성/비밀번호 설정에 실패했습니다. (${message})`);
+  }
+  if (!data?.userId) {
+    throw new Error(`Auth 계정(${email})의 사용자 ID를 가져오지 못했습니다.`);
+  }
+  return data.userId;
+}
+
+async function ensureEmployeeAuthUserWithPublicSignup(email, password) {
   try {
     return await createEmployeeAuthUser(email, password);
   } catch (error) {
@@ -77,6 +100,13 @@ export async function ensureEmployeeAuthUser(email, password) {
   await client.auth.signOut();
   if (!userId) throw new Error(`Auth 계정(${email})의 사용자 ID를 가져오지 못했습니다.`);
   return userId;
+}
+
+export async function ensureEmployeeAuthUser(client, email, password) {
+  if (client?.functions?.invoke) {
+    return ensureEmployeeAuthUserWithAdminFunction(client, email, password);
+  }
+  return ensureEmployeeAuthUserWithPublicSignup(email, password);
 }
 
 export async function loadSignedInProfile(client) {

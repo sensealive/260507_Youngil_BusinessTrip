@@ -84,15 +84,37 @@ Supabase SQL Editor에서 아래 순서대로 실행합니다.
 4. 현재 비밀번호가 Supabase Auth에서 검증되면 새 비밀번호로 저장
 5. `mark_own_password_changed` RPC를 호출해 `must_change_password`를 해제
 
-## 8. 문제 해결
+## 8. 관리자 직원 Auth 자동 생성
+
+`admin-manage.html`에서 직원을 수동 저장하거나 엑셀 업로드할 때 Auth 계정도 자동 생성/갱신하려면 Edge Function을 배포합니다.
+
+```powershell
+supabase functions deploy admin-upsert-employee-auth
+```
+
+Function Secret에는 `SUPABASE_SERVICE_ROLE_KEY`를 설정합니다. 이 값은 Supabase Dashboard의 Project Settings > API에서 확인하며, 저장소/브라우저 코드/.env에는 넣지 않습니다.
+
+```powershell
+supabase secrets set SUPABASE_SERVICE_ROLE_KEY="service-role-key"
+```
+
+동작 방식:
+
+- 앱은 직원 ID에 `@project.local`을 붙여 Auth 이메일을 만듭니다. 예: `hj.kang` → `hj.kang@project.local`
+- 브라우저는 로그인한 관리자 세션으로 Edge Function을 호출합니다.
+- Edge Function은 호출자가 활성 관리자 계정인지 확인합니다.
+- 확인 후 서버 쪽 `service_role` 권한으로 Auth 사용자를 생성하거나 기존 사용자의 비밀번호를 재설정합니다.
+
+## 9. 문제 해결
 
 - 로그인 시 “등록된 직원 ID가 아닙니다.”가 나오면 `009_restore_employee_login_lookup_policy.sql` 적용 여부를 확인합니다.
 - 직원 화면에서 본인 부서 출장만 보이면 `007`, `008` 적용 여부를 확인합니다.
 - 국가 목록이 부족하면 `006_expand_default_countries.sql` 적용 여부를 확인합니다.
 - 업체명 참조 드롭다운이 비어 있으면 `companies` 테이블과 `is_active` 값을 확인합니다.
 - 출장 저장 시 기간 겹침 오류가 나오면 메시지에 표시되는 충돌 출장 정보를 확인합니다.
+- 직원 업로드 시 “Auth 계정 자동 생성/비밀번호 설정에 실패했습니다.”가 나오면 `admin-upsert-employee-auth` Edge Function 배포와 `SUPABASE_SERVICE_ROLE_KEY` Secret 설정을 확인합니다.
 
-## 9. 보안 주의
+## 10. 보안 주의
 
 - 비밀번호 평문은 저장하지 않습니다.
 - `service_role` 키는 절대 클라이언트에 넣지 않습니다.

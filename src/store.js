@@ -159,6 +159,27 @@ export async function deactivateEmployee(client, employeeId) {
   return data;
 }
 
+export async function hasEmployeeTrips(client, employeeId) {
+  const { data, error } = await client
+    .from("trips")
+    .select("id")
+    .eq("employee_id", employeeId)
+    .limit(1);
+  throwIfError(error);
+  return Boolean(data?.length);
+}
+
+export async function hardDeleteEmployee(client, employeeId) {
+  const { data, error } = await client
+    .from("employees")
+    .delete()
+    .eq("id", employeeId)
+    .select()
+    .single();
+  throwIfError(error);
+  return data;
+}
+
 export async function upsertEmployees(client, rows) {
   const payload = rows.map((row) => ({
     department_id: row.department_id,
