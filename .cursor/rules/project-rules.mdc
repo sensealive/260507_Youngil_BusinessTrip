@@ -5,13 +5,22 @@ alwaysApply: true
 
 # 프로젝트 규칙
 
-이 파일에 코딩 스타일, 폴더 구조, 테스트·커밋 관습, 사용 중인 스택 등을 적습니다. Cursor는 `.mdc` 규칙을 참고해 제안을 맞춥니다.
+영일 출장자 현황 — Supabase(Auth + Postgres + RLS)를 쓰는 의존성 없는 정적 웹앱.
 
-## 예시 항목
+## 스택 / 구조
 
-- 언어/런타임 버전
-- 포매터·린터 (예: Prettier, ESLint)
-- 브랜치·PR 규칙
-- 이 프로젝트에서 피하고 싶은 패턴
+- 빌드 도구 없음. 순수 HTML + CSS + ES 모듈 JavaScript를 브라우저가 직접 로드한다. 번들러나 npm 패키지를 도입하지 않는다.
+- 화면은 저장소 루트의 `*.html`, 로직은 `src/`(`app.js`, `auth.js`, `config.js`, `store.js`, `supabase.js`), 스키마는 `supabase/migrations/`.
+- 배포는 GitHub Pages(master 브랜치 루트). 서버 사이드 코드를 추가하지 않는다.
 
-규칙을 바꿀 때는 [DECISIONS.md](../../DECISIONS.md)에 이유를 남기는 것을 권장합니다.
+## 지켜야 할 것
+
+- Supabase 공개 설정(URL, anon key)은 `src/config.js`에서만 읽는다. service_role key와 `.env`는 절대 커밋하지 않는다.
+- 스키마 변경은 `supabase/migrations/`에 새 번호 파일로 추가한다. 기존 마이그레이션 파일은 수정하지 않는다.
+- 권한 제어는 화면 분기가 아니라 RLS 정책으로 보장한다. 직원은 본인 데이터, 관리자는 전체.
+- 커밋 메시지는 한국어 또는 Conventional Commits 형식을 쓴다.
+
+## 문서
+
+프로젝트 지식은 `MDs/` 폴더에 있다. 상세 참조 규칙은 `AGENTS.md`를 따른다.
+규칙을 바꿀 때는 이유를 [DECISIONS.md](../../MDs/DECISIONS.md)에 남긴다.

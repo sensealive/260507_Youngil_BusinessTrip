@@ -31,8 +31,9 @@ src/
 supabase/
   migrations/
   seed/
-docs/
-  Supabase_setup.md
+MDs/
+  PROJECT_CONTEXT.md, plan.md, TODO.md, WORK_LOG.md,
+  BUGS.md, DECISIONS.md, PROJECT_LESSONS.md, Supabase_setup.md
 ```
 
 Supabase Project URL과 anon/public key는 `src/config.js`에 입력합니다. 두 값은 브라우저 정적 앱에서 공개되는 클라이언트 설정이며, 보안은 Supabase RLS 정책으로 보호합니다.
@@ -52,7 +53,7 @@ export const DEFAULT_SUPABASE_ANON_KEY = "your-publishable-or-anon-key";
 
 `service_role` 키는 절대 브라우저 코드나 저장소에 넣지 않습니다.
 
-자세한 절차는 [docs/Supabase_setup.md](./docs/Supabase_setup.md)를 확인합니다.
+자세한 절차는 [MDs/Supabase_setup.md](./MDs/Supabase_setup.md)를 확인합니다.
 
 ## 로컬 실행
 
@@ -77,9 +78,14 @@ GitHub Pages 배포 시에도 `src/config.js`에 입력된 Supabase URL/key가 �
 
 ## 문서
 
-- [PROJECT_CONTEXT.md](./PROJECT_CONTEXT.md): 현재 코드 기준 프로젝트 컨텍스트
-- [TODO.md](./TODO.md): 완료/남은 작업
-- [WORK_LOG.md](./WORK_LOG.md): 작업 로그
-- [BUGS.md](./BUGS.md): 버그 및 해결 이력
-- [docs/Supabase_setup.md](./docs/Supabase_setup.md): Supabase 설정 가이드
+프로젝트 문서는 모두 `MDs/` 폴더에 있습니다.
+
+- [MDs/PROJECT_CONTEXT.md](./MDs/PROJECT_CONTEXT.md): 현재 코드 기준 프로젝트 컨텍스트
+- [MDs/plan.md](./MDs/plan.md): 화면/기능 구현 기준 요약
+- [MDs/TODO.md](./MDs/TODO.md): 완료/남은 작업
+- [MDs/WORK_LOG.md](./MDs/WORK_LOG.md): 작업 로그
+- [MDs/BUGS.md](./MDs/BUGS.md): 버그 및 해결 이력
+- [MDs/DECISIONS.md](./MDs/DECISIONS.md): 주요 결정 기록
+- [MDs/PROJECT_LESSONS.md](./MDs/PROJECT_LESSONS.md): 작업 회고 및 재발 방지 기록
+- [MDs/Supabase_setup.md](./MDs/Supabase_setup.md): Supabase 설정 가이드
 - [ShortCut/README.md](./ShortCut/README.md): 바로가기 파일 안내

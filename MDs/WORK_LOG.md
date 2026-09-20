@@ -59,3 +59,13 @@
 - `node --check src/app.js`로 주요 JS 문법 검증 수행
 - Supabase Project URL과 anon/public key를 숨김 로컬 파일 대신 `src/config.js` 공개 설정에서 읽도록 정리
 - `src/config.local.example.js` 삭제 및 관련 문서/배포 안내 갱신
+
+## 2026-09-21
+
+- 프로젝트 md 문서를 `MDs/` 폴더로 모았다(`PROJECT_CONTEXT`, `plan`, `TODO`, `WORK_LOG`, `BUGS`, `PROJECT_LESSONS`, `docs/Supabase_setup`). `git mv`로 옮겨 파일 이력을 유지했다.
+- `MDs/DECISIONS.md`를 신설하고 기존 커밋/회고에서 확인되는 결정 3건을 기록했다.
+- `AGENTS.md`를 참조 파일 목록에서 작업 규칙 문서로 재작성하고, 같은 내용을 가리키는 `CLAUDE.md`를 추가했다. `README.md`의 문서 링크를 `MDs/` 기준으로 갱신했다.
+- 템플릿 예시 그대로였던 `.cursor/rules/project-rules.mdc`를 실제 스택/규칙(빌드 도구 없음, config.js 단일화, 마이그레이션 추가 규칙, RLS 우선)으로 채웠다.
+- 다른 프로젝트 회고였던 `PROJECT_LESSONS.Sample.md`를 저장소에서 제거하고 HermesVault `06_Templates/Project_Lessons_Template.md`로 옮겼다.
+- `MDs/`를 Obsidian Vault `HermesVault/03_Projects/260507_Youngil_BusinessTrip`에 디렉터리 Junction으로 연결했다. 원본은 이 저장소이며 Vault는 같은 파일을 바라본다.
+

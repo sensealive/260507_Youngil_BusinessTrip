@@ -53,7 +53,7 @@ RLS를 조정하는 과정에서 `employees` 조회 범위가 바뀌었고, 로�
 
 - 정적 배포에서 반드시 필요한 공개 설정은 `src/config.js`에 둔다.
 - 로컬 전용 오버레이를 쓰는 경우에도 배포 경로에서 읽히는 기본값을 먼저 확인한다.
-- 설정 변경 후에는 `README.md`와 `docs/Supabase_setup.md`의 안내도 함께 갱신한다.
+- 설정 변경 후에는 `README.md`와 `MDs/Supabase_setup.md`의 안내도 함께 갱신한다.
 
 ### 5. 관리자 계정과 직원 계정의 Auth 이메일 규칙을 명확히 고정하지 않음
 
@@ -181,7 +181,7 @@ GitHub Pages 배포는 `master / root` 기준이고, 사용자는 `ShortCut`의 
 - 엑셀 업로드는 행 단위로 검증하고 가능한 행은 계속 처리한다.
 - 방문업체명은 텍스트 입력으로 두고, 업체명 참조 드롭다운은 보조 입력 기능으로 사용한다.
 - 구형 미사용 JS 파일은 되살리지 않고 `src/app.js`, `src/store.js`, `src/auth.js` 중심 구조를 유지한다.
-- 문서 변경이 필요한 결정은 `PROJECT_CONTEXT.md`, `README.md`, `docs/Supabase_setup.md`에 함께 반영한다.
+- 문서 변경이 필요한 결정은 `MDs/PROJECT_CONTEXT.md`, `README.md`, `MDs/Supabase_setup.md`에 함께 반영한다.
 
 ## 다음 작업 전 체크리스트
 
