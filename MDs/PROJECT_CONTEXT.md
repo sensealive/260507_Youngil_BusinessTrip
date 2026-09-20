@@ -83,3 +83,12 @@ GitHub Pages 같은 정적 호스팅에서 동작하며, 데이터와 인증은 
 - 실제 Supabase에는 `001`부터 `009`까지 마이그레이션이 순서대로 적용되어야 합니다.
 - `007`, `008`, `009`는 직원 화면 전체 출장 조회와 로그인 ID 조회 정책에 중요합니다.
 - `business-trip.html`과 `admin-business-trip.html`은 출장 테이블 로직을 공유하므로 한쪽 변경 시 다른 쪽 영향도 확인합니다.
+
+## 관련 (Obsidian Vault)
+
+- [[../../02_Wiki/Youngil/Youngil|영일 사내 웹 도구 3형제]] — 같은 배포 표준을 쓰는 자매 프로젝트
+- [[../../02_Wiki/WebApps/WebApps|정적 웹앱 + BaaS]] — Supabase를 택한 맥락
+- [[../../02_Wiki/Patterns/Auth_Key_Pairs|키 쌍 혼동 패턴]] — anon key ↔ service_role key 혼동이 이 패턴의 사례 중 하나
+- 자매 프로젝트: [[../260501_Cursor_YoungilWebsite/PROJECT_CONTEXT|영일 웹사이트]] · [[../Youngil_WebApps/PROJECT_CONTEXT|Youngil WebApps]]
+
+> 아래 링크는 Obsidian Vault(`HermesVault/03_Projects/`)에서 열 때 동작한다. GitHub에서는 일반 텍스트로 보인다.
